@@ -3,6 +3,15 @@
 A GitHub Action that upgrades a single [mise](https://mise.jdx.dev)-managed tool and opens a pull request.
 Combine with a matrix strategy to upgrade all tools in parallel, one PR per tool.
 
+## How it works
+
+1. Detects if the tool is outdated using `mise outdated --bump --local`
+2. Runs `mise upgrade --bump` to upgrade — version constraints in `mise.toml` are updated beyond the current constraint
+3. If an open PR already exists for the same tool version, skips without error
+4. Commits `mise.toml` and `mise.lock`, then opens a PR
+
+Branch names follow the pattern `{branch-prefix}/{tool}-{version}` (e.g. `mise-upgrade/actionlint-1.7.13`).
+
 ## Examples
 
 ### Auto matrix from `mise outdated`
@@ -31,12 +40,12 @@ jobs:
 
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install: false
+          install: true
 
       - name: List outdated tools
         id: list
         run: |
-          tools=$(mise outdated --json | jq '[.[].name]')
+          tools=$(mise outdated --bump --local --json | jq -c '[.[].name]')
           echo "tools=${tools}" >> "$GITHUB_OUTPUT"
 
   upgrade:
