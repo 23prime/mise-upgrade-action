@@ -3,24 +3,6 @@
 A GitHub Action that upgrades a single [mise](https://mise.jdx.dev)-managed tool and opens a pull request.
 Combine with a matrix strategy to upgrade all tools in parallel, one PR per tool.
 
-## Inputs
-
-| Name | Required | Default | Description |
-| --- | --- | --- | --- |
-| `token` | Yes | — | GitHub token. Needs `contents: write` and `pull-requests: write`. |
-| `tool` | Yes | — | Tool name to upgrade (as it appears in `mise.toml`). |
-| `branch-prefix` | No | `mise-upgrade` | Branch name prefix (e.g. `mise-upgrade/actionlint-1.7.13`). |
-| `labels` | No | `` | Comma-separated labels to add to the PR. |
-| `assignees` | No | `` | Comma-separated assignees for the PR. |
-| `bump` | No | `true` | Pass `--bump` to `mise upgrade` to update version constraints in `mise.toml`. |
-
-## Outputs
-
-| Name | Description |
-| --- | --- |
-| `pr-url` | URL of the created or updated pull request. |
-| `changed` | `"true"` if the tool version changed after the upgrade. |
-
 ## Examples
 
 ### Auto matrix from `mise outdated`
@@ -100,3 +82,21 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tool: ${{ matrix.tool }}
 ```
+
+## Inputs
+
+| Name | Required | Default | Description |
+| --- | --- | --- | --- |
+| `token` | Yes | — | GitHub token. Needs `contents: write` and `pull-requests: write`. |
+| `tool` | Yes | — | Tool name to upgrade (as it appears in `mise.toml`). |
+| `branch-prefix` | No | `mise-upgrade` | Branch name prefix (e.g. `mise-upgrade/actionlint-1.7.13`). |
+| `labels` | No | `` | Comma-separated labels to add to the PR. |
+| `assignees` | No | `` | Comma-separated assignees for the PR. |
+| `bump` | No | `true` | Pass `--bump` to `mise upgrade` to update version constraints in `mise.toml`. |
+
+## Outputs
+
+| Name | Description |
+| --- | --- |
+| `pr-url` | URL of the created or updated pull request. |
+| `changed` | `"true"` if the tool version changed after the upgrade. |
