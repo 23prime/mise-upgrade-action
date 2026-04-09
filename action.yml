@@ -94,6 +94,13 @@ runs:
           printf "Open PR already exists for %s %s, skipping.\n" "${INPUT_TOOL}" "${new_version}"
           exit 0
         fi
+        gh pr list --json number,headRefName \
+          | jq -r --arg prefix "${INPUT_BRANCH_PREFIX}/${safe_tool}-" --arg branch "${branch}" \
+            '.[] | select(.headRefName | startswith($prefix)) | select(.headRefName != $branch) | .number' \
+          | while read -r pr_number; do
+            printf "Closing outdated PR #%s\n" "${pr_number}"
+            gh pr close "${pr_number}" --delete-branch
+          done
         git checkout -B "$branch"
         git add mise.toml mise.lock
         git commit -m "deps: Upgrade ${INPUT_TOOL} to ${new_version}"

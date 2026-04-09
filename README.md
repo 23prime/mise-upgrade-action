@@ -7,7 +7,7 @@ Combine with a matrix strategy to upgrade all tools in parallel, one PR per tool
 
 1. Detects if the tool is outdated using `mise outdated --bump --local`
 2. Runs `mise upgrade --bump` to upgrade — version constraints in `mise.toml` are updated beyond the current constraint
-3. If an open PR already exists for the same tool version, skips without error
+3. If an open PR already exists for the same tool at the same version, skips without error; if open PRs exist for older versions of the same tool, closes them first
 4. Commits `mise.toml` and `mise.lock`, then opens a PR
 
 Branch names follow the pattern `{branch-prefix}/{tool}-{version}` (e.g. `mise-upgrade/actionlint-1.7.13`).
