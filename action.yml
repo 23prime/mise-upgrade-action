@@ -92,6 +92,10 @@ runs:
         branch="${INPUT_BRANCH_PREFIX}/${safe_tool}-${new_version}"
         git checkout -B "$branch"
         git add mise.toml mise.lock
+        if git diff --cached --quiet; then
+          printf "%s is already at %s — PR may already exist.\n" "${INPUT_TOOL}" "${new_version}"
+          exit 0
+        fi
         git commit -m "deps: Upgrade ${INPUT_TOOL} to ${new_version}"
         git push --force-with-lease origin "$branch"
         echo "branch=${branch}" >> "$GITHUB_OUTPUT"
@@ -99,7 +103,7 @@ runs:
 
     - name: Create or update pull request
       id: pr
-      if: steps.outdated.outputs.changed == 'true'
+      if: steps.outdated.outputs.changed == 'true' && steps.push.outputs.branch != ''
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
