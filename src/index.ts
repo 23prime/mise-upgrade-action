@@ -1,0 +1,89 @@
+import * as core from '@actions/core'
+import * as github from '@actions/github'
+import { findLatestVersion } from './outdated'
+import { upgradeTool, currentVersion } from './upgrade'
+import { branchName, configureGit, checkoutBranch, commitAndPush, safeTool } from './git'
+import { findOpenPr, findOutdatedPrs, closeOutdatedPrs, createOrGetPr } from './pr'
+
+async function run(): Promise<void> {
+  const token = core.getInput('token', { required: true })
+  const tool = core.getInput('tool', { required: true })
+  const branchPrefix = core.getInput('branch-prefix') || 'mise-upgrade'
+  const bump = core.getInput('bump') !== 'false'
+  const labels = core
+    .getInput('labels')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const assignees = core
+    .getInput('assignees')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  const octokit = github.getOctokit(token)
+  const { owner, repo } = github.context.repo
+  const repository = `${owner}/${repo}`
+
+  // 1. Check for update
+  const latestVersion = await findLatestVersion(tool)
+  if (!latestVersion) {
+    core.info(`${tool} is already up to date.`)
+    core.setOutput('changed', 'false')
+    return
+  }
+  core.info(`${tool} -> ${latestVersion}`)
+  core.setOutput('changed', 'true')
+
+  // 2. Upgrade
+  await upgradeTool(tool, bump)
+  const newVersion = await currentVersion(tool)
+
+  // 3. Determine branch
+  const branch = branchName(branchPrefix, tool, newVersion)
+  const toolPrefix = `${branchPrefix}/${safeTool(tool)}-`
+
+  // 4. Skip if open PR already exists for this exact version
+  await configureGit(token, repository)
+  const existingPrNumber = await findOpenPr(octokit, owner, repo, branch)
+  if (existingPrNumber !== null) {
+    core.info(`Open PR already exists for ${tool} ${newVersion}, skipping.`)
+    return
+  }
+
+  // 5. Close outdated PRs for the same tool
+  const outdatedPrs = await findOutdatedPrs(octokit, owner, repo, toolPrefix, branch)
+  if (outdatedPrs.length > 0) {
+    core.info(`Closing ${outdatedPrs.length} outdated PR(s) for ${tool}`)
+    await closeOutdatedPrs(octokit, owner, repo, outdatedPrs)
+  }
+
+  // 6. Commit and push
+  await checkoutBranch(branch)
+  await commitAndPush(tool, newVersion, branch)
+
+  // 7. Get default branch
+  const { data: repoData } = await octokit.rest.repos.get({ owner, repo })
+  const baseBranch = repoData.default_branch
+
+  // 8. Create or get PR
+  const prUrl = await createOrGetPr({
+    octokit,
+    owner,
+    repo,
+    tool,
+    version: newVersion,
+    branch,
+    baseBranch,
+    labels,
+    assignees,
+    branchPrefix: toolPrefix,
+  })
+
+  core.setOutput('pr-url', prUrl)
+  core.info(`Pull request: ${prUrl}`)
+}
+
+run().catch((err: unknown) => {
+  core.setFailed(err instanceof Error ? err.message : String(err))
+})

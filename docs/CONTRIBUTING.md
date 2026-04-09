@@ -55,6 +55,13 @@ feat(backend): Add user management API
 chore: Update linter configuration
 ```
 
+## TypeScript
+
+The action logic (`src/`) is written in TypeScript and bundled into `dist/index.js` via `@vercel/ncc`.
+
+- After modifying `src/`, run `mise run build` to regenerate `dist/index.js` and commit both together.
+- `dist/index.js` must always be committed and kept up to date. CI verifies this.
+
 ## Quality Assurance
 
 - Consolidates all auto-fix commands into `mise fix`.

@@ -19,6 +19,10 @@ actionlint = "1"
 shellcheck = "0.11"
 "github:zizmorcore/zizmor" = "1"
 
+# Node.js
+node = "24"
+pnpm = "10"
+
 # Other tools
 lefthook = "2"
 cspell = "9"
@@ -32,7 +36,7 @@ cspell = "9"
 # Global
 [tasks.setup]
 description = "Setup tools"
-run = ["mise trust -yq", "mise install", "lefthook install"]
+run = ["mise trust -yq", "mise install", "pnpm install", "lefthook install"]
 alias = "s"
 
 [tasks.fix]
@@ -42,7 +46,7 @@ alias = "f"
 
 [tasks.check]
 description = "Check for all issues"
-depends = ["md-check", "gh-check", "spell-check"]
+depends = ["md-check", "gh-check", "spell-check", "ts-check"]
 alias = "c"
 
 [tasks.fix-and-check]
@@ -80,3 +84,19 @@ alias = "ghc"
 description = "Check spelling"
 run = "cspell . --gitignore --verbose"
 alias = "sc"
+
+# Node.js / TypeScript
+[tasks.install]
+description = "Install Node.js dependencies (frozen lockfile)"
+run = "pnpm install --frozen-lockfile"
+alias = "i"
+
+[tasks.build]
+description = "Build TypeScript → dist/"
+run = "pnpm build"
+alias = "b"
+
+[tasks.ts-check]
+description = "Type-check TypeScript and run tests"
+run = ["pnpm typecheck", "pnpm test"]
+alias = "tc"

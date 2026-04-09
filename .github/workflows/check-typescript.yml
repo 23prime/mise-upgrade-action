@@ -1,0 +1,61 @@
+name: Check TypeScript
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "__tests__/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "jest.config.js"
+      - ".github/workflows/check-typescript.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "__tests__/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "jest.config.js"
+      - ".github/workflows/check-typescript.yml"
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise and setup
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+        with:
+          install: true
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: mise run install
+
+      - name: Check
+        run: mise run ts-check
+
+      - name: Build
+        run: mise run build
+
+      - name: Check dist is up to date
+        run: |
+          if git diff --quiet dist/; then
+            echo "dist/ is up to date."
+          else
+            echo "dist/ is out of date. Run 'mise run build' and commit the result."
+            git diff dist/
+            exit 1
+          fi

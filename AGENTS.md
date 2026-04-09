@@ -19,22 +19,25 @@ Combine with a matrix strategy to upgrade all tools in parallel, one PR per tool
 ## Setup
 
 ```bash
-mise run setup   # trust, install tools, install lefthook hooks
+mise run setup   # trust, install tools, install pnpm deps, install lefthook hooks
 ```
 
 ## Tasks
 
 | Alias | Task | Description |
 | --- | --- | --- |
-| `s` | `setup` | Trust mise, install tools, install lefthook |
+| `s` | `setup` | Trust mise, install tools, install pnpm deps, install lefthook |
 | `f` | `fix` | Fix all issues (Markdown + GitHub Actions) |
-| `c` | `check` | Check all issues (Markdown + GitHub Actions + spell) |
+| `c` | `check` | Check all issues (Markdown + GitHub Actions + spell + TypeScript + tests) |
 | `fc` | `fix-and-check` | Fix then check |
 | `mf` | `md-fix` | Fix Markdown issues |
 | `mc` | `md-check` | Check Markdown issues |
 | `ghf` | `gh-fix` | Fix GitHub Actions workflows (zizmor) |
 | `ghc` | `gh-check` | Check GitHub Actions (actionlint + zizmor) |
 | `sc` | `spell-check` | Check spelling (cspell) |
+| `i` | `install` | Install Node.js dependencies (frozen lockfile) |
+| `b` | `build` | Build TypeScript → dist/ |
+| `tc` | `ts-check` | Type-check TypeScript and run tests |
 
 ## Git Hooks
 
