@@ -13,4 +13,34 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Project Overview
 
-<!-- Something -->
+A GitHub Action (`action.yml`) that upgrades a single [mise](https://mise.jdx.dev)-managed tool and opens a pull request.
+Combine with a matrix strategy to upgrade all tools in parallel, one PR per tool.
+
+## Setup
+
+```bash
+mise run setup   # trust, install tools, install lefthook hooks
+```
+
+## Tasks
+
+| Alias | Task | Description |
+| --- | --- | --- |
+| `s` | `setup` | Trust mise, install tools, install lefthook |
+| `f` | `fix` | Fix all issues (Markdown + GitHub Actions) |
+| `c` | `check` | Check all issues (Markdown + GitHub Actions + spell) |
+| `fc` | `fix-and-check` | Fix then check |
+| `mf` | `md-fix` | Fix Markdown issues |
+| `mc` | `md-check` | Check Markdown issues |
+| `ghf` | `gh-fix` | Fix GitHub Actions workflows (zizmor) |
+| `ghc` | `gh-check` | Check GitHub Actions (actionlint + zizmor) |
+| `sc` | `spell-check` | Check spelling (cspell) |
+
+## Git Hooks
+
+Both `pre-commit` and `pre-push` run `mise check` via lefthook.
+
+## Code Style
+
+- Markdown: dashes for lists (`-`), asterisks for emphasis/strong (`*`), 2-space indent
+- YAML/TOML/JSON: 2-space indent, LF line endings
