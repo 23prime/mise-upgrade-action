@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+#MISE description="Bump version and create release tag (usage: mise run release -- <major|minor|patch> [--yes])"
+set -euo pipefail
+
+# Check required commands
+for cmd in git gh; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    printf "[ERROR] Required command '%s' not found.\n" "$cmd" >&2
+    exit 1
+  fi
+done
+
+# Parse arguments
+level="${1:-}"
+yes=false
+for arg in "$@"; do
+  [[ "$arg" == "--yes" || "$arg" == "-y" ]] && yes=true
+done
+
+if [ -z "$level" ]; then
+  printf "Usage: mise run release -- <major|minor|patch> [--yes]\n" >&2
+  exit 1
+fi
+
+case "$level" in
+  major|minor|patch) ;;
+  *)
+    printf "[ERROR] Invalid bump level '%s'. Must be one of: major, minor, patch\n" "$level" >&2
+    exit 1
+    ;;
+esac
+
+# Get current version from latest tag (base is 0.0.0 when no tags exist)
+current_tag=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1)
+if [ -z "$current_tag" ]; then
+  major=0; minor=0; patch=0
+else
+  IFS='.' read -r major minor patch <<< "${current_tag#v}"
+fi
+case "$level" in
+  major) major=$((major + 1)); minor=0; patch=0 ;;
+  minor) minor=$((minor + 1)); patch=0 ;;
+  patch) patch=$((patch + 1)) ;;
+esac
+tag="v${major}.${minor}.${patch}"
+
+# Check if tag already exists
+if [ -n "$(git tag -l "$tag")" ]; then
+  printf "[ERROR] Tag '%s' already exists.\n" "$tag" >&2
+  exit 1
+fi
+
+# Check for clean working tree
+if ! git diff --quiet HEAD; then
+  printf "[ERROR] Working tree has uncommitted changes. Commit or stash them first.\n" >&2
+  exit 1
+fi
+
+sha=$(git rev-parse HEAD)
+major_tag="v$(echo "$tag" | sed 's/^v//; s/\..*//')"
+
+# Confirm
+printf "Create release %s (floating tag: %s) at commit %s? [y/N] " "$tag" "$major_tag" "$sha"
+if [[ "$yes" == false ]]; then
+  read -r answer
+  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+    printf "Aborted.\n"
+    exit 0
+  fi
+else
+  printf "y (--yes)\n"
+fi
+
+# Create annotated tag and push
+git tag -a "$tag" -m "Release ${tag}"
+printf "Pushing...\n"
+git push --follow-tags origin HEAD
+
+REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+printf "Done. GitHub Actions will create the release and update the floating tag.\n"
+printf "See: https://github.com/%s/actions\n" "$REPO"
