@@ -52,10 +52,10 @@ jobs:
 
       - name: Check dist is up to date
         run: |
-          if git diff --quiet dist/; then
-            echo "dist/ is up to date."
+          if git diff --quiet dist/index.js; then
+            echo "dist/index.js is up to date."
           else
-            echo "dist/ is out of date. Run 'mise run build' and commit the result."
-            git diff dist/
+            echo "dist/index.js is out of date. Run 'mise run build' and commit the result."
+            git diff dist/index.js
             exit 1
           fi
