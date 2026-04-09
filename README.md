@@ -1,88 +1,102 @@
-# Development Template with mise
+# mise-upgrade-action
 
-A Template for development with [mise](https://mise.jdx.dev).
+A GitHub Action that upgrades a single [mise](https://mise.jdx.dev)-managed tool and opens a pull request.
+Combine with a matrix strategy to upgrade all tools in parallel, one PR per tool.
 
-## Getting started
+## Inputs
 
-### Using setup script
+| Name | Required | Default | Description |
+| --- | --- | --- | --- |
+| `token` | Yes | — | GitHub token. Needs `contents: write` and `pull-requests: write`. |
+| `tool` | Yes | — | Tool name to upgrade (as it appears in `mise.toml`). |
+| `branch-prefix` | No | `mise-upgrade` | Branch name prefix (e.g. `mise-upgrade/actionlint-1.7.13`). |
+| `labels` | No | `` | Comma-separated labels to add to the PR. |
+| `assignees` | No | `` | Comma-separated assignees for the PR. |
+| `bump` | No | `true` | Pass `--bump` to `mise upgrade` to update version constraints in `mise.toml`. |
 
-1. Create new remote repository on GitHub.
+## Outputs
 
-2. Run the setup script.
+| Name | Description |
+| --- | --- |
+| `pr-url` | URL of the created or updated pull request. |
+| `changed` | `"true"` if the tool version changed after the upgrade. |
 
-    ```bash
-    curl -fsSL https://raw.githubusercontent.com/23prime/mise-template/main/setup.sh | bash -s -- <new-remote-url> [new-repo-name]
-    ```
+## Examples
 
-    - `<new-remote-url>` — remote URL of the pre-created repository
-    - `[new-repo-name]` — optional; defaults to the repository name derived from the URL
+### Auto matrix from `mise outdated`
 
-### Manual steps
+Automatically detects outdated tools and upgrades each in a separate job.
 
-1. Create new remote repository on GitHub.
+```yaml
+name: mise upgrade
 
-2. Clone this repository.
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Every Monday
+  workflow_dispatch:
 
-    ```bash
-    git clone git@github.com:23prime/mise-template.git
-    ```
+permissions: {}
 
-3. Copy the cloned repository to anywhere.
+jobs:
+  list-outdated:
+    runs-on: ubuntu-latest
+    outputs:
+      tools: ${{ steps.list.outputs.tools }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
-    ```bash
-    cp -ar mise-template <new-repo-path>
-    ```
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+        with:
+          install: false
 
-4. Into new repository.
+      - name: List outdated tools
+        id: list
+        run: |
+          tools=$(mise outdated --json | jq '[.[].name]')
+          echo "tools=${tools}" >> "$GITHUB_OUTPUT"
 
-    ```bash
-    cd <new-repo-path>
-    ```
+  upgrade:
+    needs: list-outdated
+    if: needs.list-outdated.outputs.tools != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      matrix:
+        tool: ${{ fromJson(needs.list-outdated.outputs.tools) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-5. Rename remote repository to `upstream`.
+      - uses: 23prime/mise-upgrade-action@ac38c8c3e862cb40f69b59f91d9044fc447ef4c7 # v1.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tool: ${{ matrix.tool }}
+```
 
-    ```bash
-    git remote rename origin upstream
-    ```
+### Manual matrix
 
-6. Add new remote repository as `origin`.
+Upgrade a fixed set of tools.
 
-    ```bash
-    git remote add origin <new-remote-url>
-    ```
+```yaml
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      matrix:
+        tool: [actionlint, shellcheck, lefthook]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-7. Check remote repositories.
-
-    ```bash
-    $ git remote -v
-    origin  <new-remote-url> (fetch)
-    origin  <new-remote-url> (push)
-    upstream        git@github.com:23prime/mise-template.git (fetch)
-    upstream        git@github.com:23prime/mise-template.git (push)
-    ```
-
-8. Push to `origin`.
-
-    ```bash
-    git push -u origin main
-    ```
-
-9. If you use GitHub CLI, set the default repository.
-
-    ```bash
-    gh repo set-default <new-repo-name>
-    ```
-
-## Merge from upstream
-
-1. Fetch upstream changes.
-
-    ```bash
-    git fetch upstream
-    ```
-
-2. Merge.
-
-    ```bash
-    git merge upstream/main
-    ```
+      - uses: 23prime/mise-upgrade-action@ac38c8c3e862cb40f69b59f91d9044fc447ef4c7 # v1.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tool: ${{ matrix.tool }}
+```
