@@ -1,0 +1,135 @@
+name: 'mise upgrade'
+description: 'Upgrade a single mise-managed tool and open a pull request'
+author: '23prime'
+
+branding:
+  icon: 'arrow-up-circle'
+  color: 'blue'
+
+inputs:
+  token:
+    description: 'GitHub token (contents: write and pull-requests: write permissions required)'
+    required: true
+  tool:
+    description: 'Tool name to upgrade (as it appears in mise.toml)'
+    required: true
+  branch-prefix:
+    description: 'Branch name prefix (e.g. "mise-upgrade" → "mise-upgrade/actionlint-1.7.13")'
+    required: false
+    default: 'mise-upgrade'
+  labels:
+    description: 'Comma-separated list of labels to add to the PR'
+    required: false
+    default: ''
+  assignees:
+    description: 'Comma-separated list of assignees for the PR'
+    required: false
+    default: ''
+  bump:
+    description: 'Pass --bump to mise upgrade to update version constraints in mise.toml'
+    required: false
+    default: 'true'
+
+outputs:
+  pr-url:
+    description: 'URL of the created or updated pull request'
+    value: ${{ steps.pr.outputs.url }}
+  changed:
+    description: '"true" if the tool version changed after the upgrade'
+    value: ${{ steps.outdated.outputs.changed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install mise
+      uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      with:
+        install: false
+
+    - name: Check for update
+      id: outdated
+      shell: bash
+      env:
+        INPUT_TOOL: ${{ inputs.tool }}
+      run: |
+        new_version="$(mise outdated --json | jq -r --arg t "${INPUT_TOOL}" '[.[] | select(.name == $t) | .latest] | first')"
+        if [[ -z "$new_version" ]]; then
+          printf "%s is already up to date.\n" "${INPUT_TOOL}"
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+        else
+          printf "%s -> %s\n" "${INPUT_TOOL}" "$new_version"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "new-version=${new_version}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Upgrade tool
+      if: steps.outdated.outputs.changed == 'true'
+      shell: bash
+      env:
+        INPUT_TOOL: ${{ inputs.tool }}
+        INPUT_BUMP: ${{ inputs.bump }}
+      run: |
+        if [[ "${INPUT_BUMP}" == "true" ]]; then
+          mise upgrade --bump "${INPUT_TOOL}"
+        else
+          mise upgrade "${INPUT_TOOL}"
+        fi
+
+    - name: Commit and push
+      id: push
+      if: steps.outdated.outputs.changed == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_TOOL: ${{ inputs.tool }}
+        INPUT_BRANCH_PREFIX: ${{ inputs.branch-prefix }}
+        NEW_VERSION: ${{ steps.outdated.outputs.new-version }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        safe_tool="$(echo "${INPUT_TOOL}" | sed 's/[^a-zA-Z0-9._-]/-/g')"
+        branch="${INPUT_BRANCH_PREFIX}/${safe_tool}-${NEW_VERSION}"
+        git checkout -B "$branch"
+        git add mise.toml mise.lock
+        git commit -m "deps: Upgrade ${INPUT_TOOL} to ${NEW_VERSION}"
+        git push --force-with-lease origin "$branch"
+        echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+
+    - name: Create or update pull request
+      id: pr
+      if: steps.outdated.outputs.changed == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        INPUT_TOOL: ${{ inputs.tool }}
+        INPUT_BRANCH: ${{ steps.push.outputs.branch }}
+        NEW_VERSION: ${{ steps.outdated.outputs.new-version }}
+        INPUT_LABELS: ${{ inputs.labels }}
+        INPUT_ASSIGNEES: ${{ inputs.assignees }}
+      run: |
+        DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')"
+
+        EXTRA=()
+        IFS=',' read -ra _labels <<< "${INPUT_LABELS}"
+        for _l in "${_labels[@]}"; do
+          _l="$(echo "$_l" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          [[ -n "$_l" ]] && EXTRA+=(--label "$_l")
+        done
+        IFS=',' read -ra _assignees <<< "${INPUT_ASSIGNEES}"
+        for _a in "${_assignees[@]}"; do
+          _a="$(echo "$_a" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          [[ -n "$_a" ]] && EXTRA+=(--assignee "$_a")
+        done
+
+        if ! url="$(gh pr create \
+          --title "deps: Upgrade ${INPUT_TOOL} to ${NEW_VERSION}" \
+          --body "Automated upgrade of ${INPUT_TOOL} to ${NEW_VERSION}." \
+          --base "$DEFAULT_BRANCH" \
+          --head "${INPUT_BRANCH}" \
+          "${EXTRA[@]}")"; then
+          url="$(gh pr view "${INPUT_BRANCH}" --json url --jq '.url')"
+        fi
+
+        echo "url=${url}" >> "$GITHUB_OUTPUT"
+        printf "Pull request: %s\n" "$url"
