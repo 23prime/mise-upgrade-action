@@ -19,12 +19,12 @@ jobs:
 
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install: false
+          install: true
 
       - name: List outdated tools
         id: list
         run: |
-          tools=$(mise outdated --json | jq -c '[.[].name]')
+          tools=$(mise outdated --bump --local --json | jq -c '[.[].name]')
           echo "tools=${tools}" >> "$GITHUB_OUTPUT"
 
   upgrade:

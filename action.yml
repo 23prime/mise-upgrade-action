@@ -44,7 +44,7 @@ runs:
     - name: Install mise
       uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
       with:
-        install: false
+        install: true
 
     - name: Check for update
       id: outdated
@@ -52,7 +52,7 @@ runs:
       env:
         INPUT_TOOL: ${{ inputs.tool }}
       run: |
-        new_version="$(mise outdated --json | jq -r --arg t "${INPUT_TOOL}" '[.[] | select(.name == $t) | .latest] | first')"
+        new_version="$(mise outdated --bump --local --json | jq -r --arg t "${INPUT_TOOL}" '[.[] | select(.name == $t) | .latest] | first')"
         if [[ -z "$new_version" || "$new_version" == "null" ]]; then
           printf "%s is already up to date.\n" "${INPUT_TOOL}"
           echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -83,18 +83,19 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         INPUT_TOOL: ${{ inputs.tool }}
         INPUT_BRANCH_PREFIX: ${{ inputs.branch-prefix }}
-        NEW_VERSION: ${{ steps.outdated.outputs.new-version }}
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        new_version="$(mise current "${INPUT_TOOL}")"
         safe_tool="$(echo "${INPUT_TOOL}" | sed 's/[^a-zA-Z0-9._-]/-/g')"
-        branch="${INPUT_BRANCH_PREFIX}/${safe_tool}-${NEW_VERSION}"
+        branch="${INPUT_BRANCH_PREFIX}/${safe_tool}-${new_version}"
         git checkout -B "$branch"
         git add mise.toml mise.lock
-        git commit -m "deps: Upgrade ${INPUT_TOOL} to ${NEW_VERSION}"
+        git commit -m "deps: Upgrade ${INPUT_TOOL} to ${new_version}"
         git push --force-with-lease origin "$branch"
         echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+        echo "new-version=${new_version}" >> "$GITHUB_OUTPUT"
 
     - name: Create or update pull request
       id: pr
@@ -104,7 +105,7 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         INPUT_TOOL: ${{ inputs.tool }}
         INPUT_BRANCH: ${{ steps.push.outputs.branch }}
-        NEW_VERSION: ${{ steps.outdated.outputs.new-version }}
+        NEW_VERSION: ${{ steps.push.outputs.new-version }}
         INPUT_LABELS: ${{ inputs.labels }}
         INPUT_ASSIGNEES: ${{ inputs.assignees }}
       run: |
