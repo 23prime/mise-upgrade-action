@@ -90,12 +90,12 @@ runs:
         new_version="$(mise current "${INPUT_TOOL}")"
         safe_tool="$(echo "${INPUT_TOOL}" | sed 's/[^a-zA-Z0-9._-]/-/g')"
         branch="${INPUT_BRANCH_PREFIX}/${safe_tool}-${new_version}"
-        git checkout -B "$branch"
-        git add mise.toml mise.lock
-        if git diff --cached --quiet; then
-          printf "%s is already at %s — PR may already exist.\n" "${INPUT_TOOL}" "${new_version}"
+        if gh pr view "${branch}" --json state --jq '.state' 2>/dev/null | grep -q "OPEN"; then
+          printf "Open PR already exists for %s %s, skipping.\n" "${INPUT_TOOL}" "${new_version}"
           exit 0
         fi
+        git checkout -B "$branch"
+        git add mise.toml mise.lock
         git commit -m "deps: Upgrade ${INPUT_TOOL} to ${new_version}"
         git push --force-with-lease origin "$branch"
         echo "branch=${branch}" >> "$GITHUB_OUTPUT"
