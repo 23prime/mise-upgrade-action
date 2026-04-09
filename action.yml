@@ -46,6 +46,7 @@ runs:
       with:
         install: true
         cache: true
+        github_token: ${{ inputs.token }}
 
     - name: Check for update
       id: outdated
