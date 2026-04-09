@@ -53,7 +53,7 @@ runs:
         INPUT_TOOL: ${{ inputs.tool }}
       run: |
         new_version="$(mise outdated --json | jq -r --arg t "${INPUT_TOOL}" '[.[] | select(.name == $t) | .latest] | first')"
-        if [[ -z "$new_version" ]]; then
+        if [[ -z "$new_version" || "$new_version" == "null" ]]; then
           printf "%s is already up to date.\n" "${INPUT_TOOL}"
           echo "changed=false" >> "$GITHUB_OUTPUT"
         else

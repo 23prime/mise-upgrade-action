@@ -24,7 +24,7 @@ jobs:
       - name: List outdated tools
         id: list
         run: |
-          tools=$(mise outdated --json | jq '[.[].name]')
+          tools=$(mise outdated --json | jq -c '[.[].name]')
           echo "tools=${tools}" >> "$GITHUB_OUTPUT"
 
   upgrade:
