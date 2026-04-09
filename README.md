@@ -71,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: 23prime/mise-upgrade-action@ac38c8c3e862cb40f69b59f91d9044fc447ef4c7 # v1.0.0
+      - uses: 23prime/mise-upgrade-action@19fcc3cb713749e659ffbea65f1ff041c1d65e1c # v0.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tool: ${{ matrix.tool }}
@@ -95,7 +95,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: 23prime/mise-upgrade-action@ac38c8c3e862cb40f69b59f91d9044fc447ef4c7 # v1.0.0
+      - uses: 23prime/mise-upgrade-action@19fcc3cb713749e659ffbea65f1ff041c1d65e1c # v0.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tool: ${{ matrix.tool }}
