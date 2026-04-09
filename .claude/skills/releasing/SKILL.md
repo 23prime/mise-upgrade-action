@@ -7,9 +7,15 @@ description: Release workflow for mise-upgrade-action. Use when the user wants t
 
 ## Steps
 
-### 1. Ask for the bump level
+### 1. Show the current version and ask for the bump level
 
-If the user hasn't specified it, ask: `major`, `minor`, or `patch`.
+Run the following to get the current latest tag:
+
+```bash
+git describe --tags --abbrev=0 2>/dev/null || echo "no tags yet"
+```
+
+Show the result to the user, then ask for the bump level (`major`, `minor`, or `patch`) if not already specified.
 
 ### 2. Run the release task
 
