@@ -36,7 +36,7 @@ export async function findOutdatedPrs(
   branchPrefix: string,
   currentBranch: string,
 ): Promise<Array<{ number: number; branch: string }>> {
-  const { data } = await octokit.rest.pulls.list({
+  const data = await octokit.paginate(octokit.rest.pulls.list, {
     owner,
     repo,
     state: 'open',

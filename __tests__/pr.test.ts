@@ -1,10 +1,12 @@
 import { findOpenPr, findOutdatedPrs, closeOutdatedPrs, createOrGetPr } from '../src/pr'
 
 function makeOctokit(prs: Array<{ number: number; head: { ref: string }; html_url: string }>) {
+  const listFn = jest.fn().mockResolvedValue({ data: prs })
   return {
+    paginate: jest.fn().mockResolvedValue(prs),
     rest: {
       pulls: {
-        list: jest.fn().mockResolvedValue({ data: prs }),
+        list: listFn,
       },
     },
   }
