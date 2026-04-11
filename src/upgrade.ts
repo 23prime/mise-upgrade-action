@@ -13,14 +13,26 @@ export async function validateToolExists(tool: string): Promise<void> {
   })
 
   const trimmed = stdout.trim()
-  if (exitCode !== 0 || trimmed === '' || trimmed === '{}' || trimmed === '[]') {
+  if (exitCode !== 0 || trimmed === '') {
     throw new Error(`Tool "${tool}" is not managed by mise. Add it to mise.toml first.`)
   }
 
+  let parsed: unknown
   try {
-    JSON.parse(trimmed)
+    parsed = JSON.parse(trimmed)
   } catch (err) {
     throw new Error(`Failed to parse \`mise ls\` output for "${tool}".`, { cause: err })
+  }
+
+  const isEmptyObject =
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    !Array.isArray(parsed) &&
+    Object.keys(parsed as Record<string, unknown>).length === 0
+  const isEmptyArray = Array.isArray(parsed) && parsed.length === 0
+
+  if (isEmptyObject || isEmptyArray) {
+    throw new Error(`Tool "${tool}" is not managed by mise. Add it to mise.toml first.`)
   }
 }
 

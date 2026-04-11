@@ -45,6 +45,26 @@ describe('validateToolExists', () => {
     )
   })
 
+  it('throws when stdout is empty array', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from('[]'))
+      return 0
+    })
+    await expect(validateToolExists('nonexistent')).rejects.toThrow(
+      'Tool "nonexistent" is not managed by mise',
+    )
+  })
+
+  it('throws when stdout is whitespace-padded empty JSON (e.g. "{ }")', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from('{ }'))
+      return 0
+    })
+    await expect(validateToolExists('nonexistent')).rejects.toThrow(
+      'Tool "nonexistent" is not managed by mise',
+    )
+  })
+
   it('throws on malformed JSON output', async () => {
     mockExec.mockImplementation(async (_cmd, _args, options) => {
       options?.listeners?.stdout?.(Buffer.from('not valid json'))
