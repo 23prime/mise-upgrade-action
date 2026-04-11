@@ -71,3 +71,30 @@ The action logic (`src/`) is written in TypeScript and bundled into `dist/index.
 ## Pull Requests
 
 Create a pull request following the [template](../.github/PULL_REQUEST_TEMPLATE.md).
+
+## Release
+
+Releases are tag-based. The `dist/index.js` bundle is only updated at release time — `main` does not contain a built artifact between releases.
+
+**Rule: release promptly after merging to `main`.**
+
+Any merged PR that touches `src/` must be followed by a release before the dogfood workflow will reflect the change. Do not leave `main` in an unreleased state for extended periods.
+
+### Version bump guidelines
+
+- `patch` — Bug fixes, documentation updates, minor improvements
+- `minor` — New features, backwards-compatible changes
+- `major` — Breaking changes to action inputs/outputs/behavior
+
+### How to release
+
+```bash
+mise run release -- <major|minor|patch>
+```
+
+The release task will:
+
+1. Build `dist/` from the current `src/`
+2. Commit the updated `dist/` if it changed
+3. Prompt for confirmation, then create an annotated tag and push
+4. CI picks up the tag and creates the GitHub Release with the floating major tag (e.g. `v1`)
