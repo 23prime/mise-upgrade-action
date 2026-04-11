@@ -10,7 +10,7 @@ beforeEach(() => {
 })
 
 describe('upgradeTool', () => {
-  it('runs mise upgrade <tool> without --bump by default', async () => {
+  it('runs mise upgrade <tool> when bump is false', async () => {
     mockExec.mockResolvedValue(0)
     await upgradeTool('actionlint', false)
     expect(mockExec).toHaveBeenCalledWith('mise', ['upgrade', 'actionlint'])
