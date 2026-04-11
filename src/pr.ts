@@ -45,7 +45,7 @@ export interface PrOptions {
 }
 
 export function renderTemplate(template: string, tool: string, version: string): string {
-  return template.replace(/\{tool\}/g, tool).replace(/\{version\}/g, version)
+  return template.replace(/\{tool\}/g, () => tool).replace(/\{version\}/g, () => version)
 }
 
 export async function findOpenPr(

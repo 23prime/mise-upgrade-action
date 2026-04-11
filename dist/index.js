@@ -30055,8 +30055,8 @@ async function run() {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
-    const prTitle = core.getInput('pr-title') || 'deps: Upgrade {tool} to {version}';
-    const prBody = core.getInput('pr-body') || 'Automated upgrade of {tool} to {version}.';
+    const prTitle = core.getInput('pr-title');
+    const prBody = core.getInput('pr-body');
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
     const repository = `${owner}/${repo}`;
@@ -30275,7 +30275,7 @@ function rethrowWithContext(err, context) {
     throw err;
 }
 function renderTemplate(template, tool, version) {
-    return template.replace(/\{tool\}/g, tool).replace(/\{version\}/g, version);
+    return template.replace(/\{tool\}/g, () => tool).replace(/\{version\}/g, () => version);
 }
 async function findOpenPr(octokit, owner, repo, branch) {
     try {
