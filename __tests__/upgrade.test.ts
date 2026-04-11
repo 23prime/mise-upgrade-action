@@ -1,5 +1,5 @@
 import * as exec from '@actions/exec'
-import { upgradeTool, currentVersion } from '../src/upgrade'
+import { validateToolExists, upgradeTool, currentVersion } from '../src/upgrade'
 
 jest.mock('@actions/exec')
 
@@ -7,6 +7,78 @@ const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>
 
 beforeEach(() => {
   jest.clearAllMocks()
+})
+
+describe('validateToolExists', () => {
+  it('resolves when tool is found in mise ls output', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from('{"actionlint":[{"version":"1.7.13"}]}'))
+      return 0
+    })
+    await expect(validateToolExists('actionlint')).resolves.toBeUndefined()
+  })
+
+  it('throws when exit code is non-zero', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, _options) => 1)
+    await expect(validateToolExists('nonexistent')).rejects.toThrow(
+      'Tool "nonexistent" is not managed by mise',
+    )
+  })
+
+  it('throws when stdout is empty', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from(''))
+      return 0
+    })
+    await expect(validateToolExists('nonexistent')).rejects.toThrow(
+      'Tool "nonexistent" is not managed by mise',
+    )
+  })
+
+  it('throws when stdout is empty object', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from('{}'))
+      return 0
+    })
+    await expect(validateToolExists('nonexistent')).rejects.toThrow(
+      'Tool "nonexistent" is not managed by mise',
+    )
+  })
+
+  it('throws when stdout is empty array', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from('[]'))
+      return 0
+    })
+    await expect(validateToolExists('nonexistent')).rejects.toThrow(
+      'Tool "nonexistent" is not managed by mise',
+    )
+  })
+
+  it('throws when stdout is whitespace-padded empty JSON (e.g. "{ }")', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from('{ }'))
+      return 0
+    })
+    await expect(validateToolExists('nonexistent')).rejects.toThrow(
+      'Tool "nonexistent" is not managed by mise',
+    )
+  })
+
+  it('throws on malformed JSON output', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from('not valid json'))
+      return 0
+    })
+    await expect(validateToolExists('actionlint')).rejects.toThrow(
+      'Failed to parse `mise ls` output for "actionlint".',
+    )
+  })
+
+  it('propagates exec errors without masking', async () => {
+    mockExec.mockRejectedValue(new Error('mise binary not found'))
+    await expect(validateToolExists('actionlint')).rejects.toThrow('mise binary not found')
+  })
 })
 
 describe('upgradeTool', () => {
