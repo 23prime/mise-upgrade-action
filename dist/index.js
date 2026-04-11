@@ -30216,7 +30216,14 @@ async function getOutdatedTools() {
         },
         silent: true,
     });
-    const parsed = JSON.parse(stdout);
+    let parsed;
+    try {
+        parsed = JSON.parse(stdout);
+    }
+    catch (err) {
+        const reason = err instanceof Error ? `: ${err.message}` : '';
+        throw new Error(`Failed to parse mise outdated output as JSON${reason}: ${stdout.slice(0, 200)}`, { cause: err });
+    }
     if (Array.isArray(parsed))
         return parsed;
     return Object.values(parsed);
@@ -30240,14 +30247,39 @@ exports.findOpenPr = findOpenPr;
 exports.findOutdatedPrs = findOutdatedPrs;
 exports.closeOutdatedPrs = closeOutdatedPrs;
 exports.createOrGetPr = createOrGetPr;
+function httpStatus(err) {
+    if (err instanceof Error && 'status' in err && typeof err.status === 'number') {
+        return err.status;
+    }
+    return undefined;
+}
+function rethrowWithContext(err, context) {
+    const status = httpStatus(err);
+    const originalMessage = err instanceof Error ? err.message : String(err);
+    if (status === 401) {
+        throw new Error(`GitHub API authentication failed (401). Check that the token has the required permissions (contents: write, pull-requests: write). Original error: ${originalMessage}`, { cause: err });
+    }
+    if (status === 403 || status === 429) {
+        throw new Error(`GitHub API rate limit or permission error (${status}). Try again later or check token scopes. Original error: ${originalMessage}`, { cause: err });
+    }
+    if (status !== undefined) {
+        throw new Error(`GitHub API error ${status} during ${context}: ${originalMessage}`, { cause: err });
+    }
+    throw err;
+}
 async function findOpenPr(octokit, owner, repo, branch) {
-    const { data } = await octokit.rest.pulls.list({
-        owner,
-        repo,
-        head: `${owner}:${branch}`,
-        state: 'open',
-    });
-    return data[0]?.number ?? null;
+    try {
+        const { data } = await octokit.rest.pulls.list({
+            owner,
+            repo,
+            head: `${owner}:${branch}`,
+            state: 'open',
+        });
+        return data[0]?.number ?? null;
+    }
+    catch (err) {
+        rethrowWithContext(err, 'findOpenPr');
+    }
 }
 async function findOutdatedPrs(octokit, owner, repo, branchPrefix, currentBranch) {
     const data = await octokit.paginate(octokit.rest.pulls.list, {
@@ -30283,9 +30315,8 @@ async function createOrGetPr(opts) {
         prUrl = data.html_url;
     }
     catch (err) {
-        const isConflict = err instanceof Error && 'status' in err && err.status === 422;
-        if (!isConflict)
-            throw err;
+        if (httpStatus(err) !== 422)
+            rethrowWithContext(err, 'createPr');
         const existing = await octokit.rest.pulls.list({
             owner,
             repo,
