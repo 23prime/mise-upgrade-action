@@ -77,7 +77,6 @@ async function run(): Promise<void> {
     baseBranch,
     labels,
     assignees,
-    branchPrefix: toolPrefix,
   })
 
   core.setOutput('pr-url', prUrl)

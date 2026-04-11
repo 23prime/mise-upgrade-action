@@ -12,7 +12,6 @@ export interface PrOptions {
   baseBranch: string
   labels: string[]
   assignees: string[]
-  branchPrefix: string
 }
 
 export async function findOpenPr(
