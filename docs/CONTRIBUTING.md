@@ -59,8 +59,9 @@ chore: Update linter configuration
 
 The action logic (`src/`) is written in TypeScript and bundled into `dist/index.js` via `@vercel/ncc`.
 
-- After modifying `src/`, the release task (`mise run release`) automatically rebuilds `dist/` and commits it before tagging.
-- You do not need to manually run `mise run build` before releasing. CI does not verify dist freshness — the release task is the source of truth.
+- After modifying `src/`, run `mise run build` and commit `dist/index.js` together with your source changes.
+- The pre-commit hook will reject commits that stage `src/` changes without also staging `dist/index.js`.
+- CI verifies that the committed `dist/index.js` matches a fresh build.
 
 ## Quality Assurance
 

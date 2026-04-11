@@ -29980,12 +29980,7 @@ async function configureGit(token, repository) {
         'user.email',
         '41898282+github-actions[bot]@users.noreply.github.com',
     ]);
-    await exec.exec('git', [
-        'remote',
-        'set-url',
-        'origin',
-        `https://x-access-token:${token}@github.com/${repository}.git`,
-    ]);
+    await exec.exec('git', ['remote', 'set-url', 'origin', `https://x-access-token:${token}@github.com/${repository}.git`], { silent: true });
 }
 async function checkoutBranch(branch) {
     await exec.exec('git', ['checkout', '-B', branch]);
@@ -30074,6 +30069,9 @@ async function run() {
     // 2. Upgrade
     await (0, upgrade_1.upgradeTool)(tool, bump);
     const newVersion = await (0, upgrade_1.currentVersion)(tool);
+    if (!newVersion) {
+        throw new Error(`Unable to determine current version for "${tool}" after upgrade`);
+    }
     // 3. Determine branch
     const branch = (0, git_1.branchName)(branchPrefix, tool, newVersion);
     const toolPrefix = `${branchPrefix}/${(0, git_1.safeTool)(tool)}-`;
@@ -30081,7 +30079,9 @@ async function run() {
     await (0, git_1.configureGit)(token, repository);
     const existingPrNumber = await (0, pr_1.findOpenPr)(octokit, owner, repo, branch);
     if (existingPrNumber !== null) {
-        core.info(`Open PR already exists for ${tool} ${newVersion}, skipping.`);
+        const existingPrUrl = `https://github.com/${owner}/${repo}/pull/${existingPrNumber}`;
+        core.setOutput('pr-url', existingPrUrl);
+        core.info(`Open PR already exists for ${tool} ${newVersion}: ${existingPrUrl}`);
         return;
     }
     // 5. Close outdated PRs for the same tool
@@ -30107,7 +30107,6 @@ async function run() {
         baseBranch,
         labels,
         assignees,
-        branchPrefix: toolPrefix,
     });
     core.setOutput('pr-url', prUrl);
     core.info(`Pull request: ${prUrl}`);
@@ -30171,7 +30170,10 @@ async function getOutdatedTools() {
         },
         silent: true,
     });
-    return JSON.parse(stdout);
+    const parsed = JSON.parse(stdout);
+    if (Array.isArray(parsed))
+        return parsed;
+    return Object.values(parsed);
 }
 async function findLatestVersion(tool) {
     const entries = await getOutdatedTools();
@@ -30202,7 +30204,7 @@ async function findOpenPr(octokit, owner, repo, branch) {
     return data[0]?.number ?? null;
 }
 async function findOutdatedPrs(octokit, owner, repo, branchPrefix, currentBranch) {
-    const { data } = await octokit.rest.pulls.list({
+    const data = await octokit.paginate(octokit.rest.pulls.list, {
         owner,
         repo,
         state: 'open',
@@ -30234,7 +30236,10 @@ async function createOrGetPr(opts) {
         prNumber = data.number;
         prUrl = data.html_url;
     }
-    catch {
+    catch (err) {
+        const isConflict = err instanceof Error && 'status' in err && err.status === 422;
+        if (!isConflict)
+            throw err;
         const existing = await octokit.rest.pulls.list({
             owner,
             repo,
