@@ -44,6 +44,21 @@ describe('validateToolExists', () => {
       'Tool "nonexistent" is not managed by mise',
     )
   })
+
+  it('throws on malformed JSON output', async () => {
+    mockExec.mockImplementation(async (_cmd, _args, options) => {
+      options?.listeners?.stdout?.(Buffer.from('not valid json'))
+      return 0
+    })
+    await expect(validateToolExists('actionlint')).rejects.toThrow(
+      'Failed to parse `mise ls` output for "actionlint".',
+    )
+  })
+
+  it('propagates exec errors without masking', async () => {
+    mockExec.mockRejectedValue(new Error('mise binary not found'))
+    await expect(validateToolExists('actionlint')).rejects.toThrow('mise binary not found')
+  })
 })
 
 describe('upgradeTool', () => {
