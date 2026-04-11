@@ -5,7 +5,7 @@ import { upgradeTool, currentVersion } from './upgrade'
 import { branchName, configureGit, checkoutBranch, commitAndPush, safeTool } from './git'
 import { findOpenPr, findOutdatedPrs, closeOutdatedPrs, createOrGetPr } from './pr'
 
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   const token = core.getInput('token', { required: true })
   const tool = core.getInput('tool', { required: true })
   const branchPrefix = core.getInput('branch-prefix') || 'mise-upgrade'
@@ -88,6 +88,3 @@ async function run(): Promise<void> {
   core.info(`Pull request: ${prUrl}`)
 }
 
-run().catch((err: unknown) => {
-  core.setFailed(err instanceof Error ? err.message : String(err))
-})
