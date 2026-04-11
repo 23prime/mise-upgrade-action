@@ -38,6 +38,9 @@ async function run(): Promise<void> {
   // 2. Upgrade
   await upgradeTool(tool, bump)
   const newVersion = await currentVersion(tool)
+  if (!newVersion) {
+    throw new Error(`Unable to determine current version for "${tool}" after upgrade`)
+  }
 
   // 3. Determine branch
   const branch = branchName(branchPrefix, tool, newVersion)
@@ -47,7 +50,9 @@ async function run(): Promise<void> {
   await configureGit(token, repository)
   const existingPrNumber = await findOpenPr(octokit, owner, repo, branch)
   if (existingPrNumber !== null) {
-    core.info(`Open PR already exists for ${tool} ${newVersion}, skipping.`)
+    const existingPrUrl = `https://github.com/${owner}/${repo}/pull/${existingPrNumber}`
+    core.setOutput('pr-url', existingPrUrl)
+    core.info(`Open PR already exists for ${tool} ${newVersion}: ${existingPrUrl}`)
     return
   }
 
