@@ -76,7 +76,10 @@ export async function createOrGetPr(opts: PrOptions): Promise<string> {
     })
     prNumber = data.number
     prUrl = data.html_url
-  } catch {
+  } catch (err: unknown) {
+    const isConflict =
+      err instanceof Error && 'status' in err && (err as { status: number }).status === 422
+    if (!isConflict) throw err
     const existing = await octokit.rest.pulls.list({
       owner,
       repo,
