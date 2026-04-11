@@ -56,6 +56,14 @@ if ! git diff --quiet HEAD; then
   exit 1
 fi
 
+# Build dist and commit if changed
+printf "Building dist...\n"
+mise run build
+if ! git diff --quiet dist/; then
+  git add dist/
+  git commit -m "build: Update dist for ${tag}"
+fi
+
 sha=$(git rev-parse HEAD)
 major_tag="v$(echo "$tag" | sed 's/^v//; s/\..*//')"
 

@@ -46,16 +46,3 @@ jobs:
 
       - name: Check
         run: mise run ts-check
-
-      - name: Build
-        run: mise run build
-
-      - name: Check dist is up to date
-        run: |
-          if git diff --quiet dist/index.js; then
-            echo "dist/index.js is up to date."
-          else
-            echo "dist/index.js is out of date. Run 'mise run build' and commit the result."
-            git diff dist/index.js
-            exit 1
-          fi
