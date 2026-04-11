@@ -40,6 +40,12 @@ export interface PrOptions {
   baseBranch: string
   labels: string[]
   assignees: string[]
+  prTitle: string
+  prBody: string
+}
+
+export function renderTemplate(template: string, tool: string, version: string): string {
+  return template.replace(/\{tool\}/g, tool).replace(/\{version\}/g, version)
 }
 
 export async function findOpenPr(
@@ -92,7 +98,7 @@ export async function closeOutdatedPrs(
 }
 
 export async function createOrGetPr(opts: PrOptions): Promise<string> {
-  const { octokit, owner, repo, tool, version, branch, baseBranch, labels, assignees } = opts
+  const { octokit, owner, repo, tool, version, branch, baseBranch, labels, assignees, prTitle, prBody } = opts
 
   let prNumber: number
   let prUrl: string
@@ -101,8 +107,8 @@ export async function createOrGetPr(opts: PrOptions): Promise<string> {
     const { data } = await octokit.rest.pulls.create({
       owner,
       repo,
-      title: `deps: Upgrade ${tool} to ${version}`,
-      body: `Automated upgrade of ${tool} to ${version}.`,
+      title: renderTemplate(prTitle, tool, version),
+      body: renderTemplate(prBody, tool, version),
       base: baseBranch,
       head: branch,
     })

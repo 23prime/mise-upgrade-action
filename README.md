@@ -104,6 +104,8 @@ jobs:
 | `labels` | No | `` | Comma-separated labels to add to the PR. |
 | `assignees` | No | `` | Comma-separated assignees for the PR. |
 | `bump` | No | `true` | Pass `--bump` to `mise upgrade` to update version constraints in `mise.toml`. |
+| `pr-title` | No | `deps: Upgrade {tool} to {version}` | PR title template. Supports `{tool}` and `{version}` placeholders. |
+| `pr-body` | No | `Automated upgrade of {tool} to {version}.` | PR body template. Supports `{tool}` and `{version}` placeholders. |
 
 ## Outputs
 

@@ -1,4 +1,4 @@
-import { findOpenPr, findOutdatedPrs, closeOutdatedPrs, createOrGetPr } from '../src/pr'
+import { findOpenPr, findOutdatedPrs, closeOutdatedPrs, createOrGetPr, renderTemplate } from '../src/pr'
 
 function makeOctokit(prs: Array<{ number: number; head: { ref: string }; html_url: string }>) {
   const listFn = jest.fn().mockResolvedValue({ data: prs })
@@ -97,6 +97,22 @@ describe('closeOutdatedPrs', () => {
   })
 })
 
+describe('renderTemplate', () => {
+  it('replaces {tool} and {version} placeholders', () => {
+    expect(renderTemplate('deps: Upgrade {tool} to {version}', 'actionlint', '1.7.13')).toBe(
+      'deps: Upgrade actionlint to 1.7.13',
+    )
+  })
+
+  it('replaces multiple occurrences', () => {
+    expect(renderTemplate('{tool} {tool} {version}', 'node', '22.0.0')).toBe('node node 22.0.0')
+  })
+
+  it('leaves template unchanged when no placeholders match', () => {
+    expect(renderTemplate('no placeholders here', 'tool', '1.0')).toBe('no placeholders here')
+  })
+})
+
 describe('createOrGetPr', () => {
   const baseOpts = {
     owner: 'owner',
@@ -107,6 +123,8 @@ describe('createOrGetPr', () => {
     baseBranch: 'main',
     labels: [],
     assignees: [],
+    prTitle: 'deps: Upgrade {tool} to {version}',
+    prBody: 'Automated upgrade of {tool} to {version}.',
   }
 
   it('creates a new PR and returns its URL', async () => {
@@ -115,6 +133,21 @@ describe('createOrGetPr', () => {
     const url = await createOrGetPr({ ...baseOpts, octokit: octokit as never })
     expect(create).toHaveBeenCalledTimes(1)
     expect(url).toBe('https://github.com/owner/repo/pull/42')
+  })
+
+  it('renders title and body templates before creating PR', async () => {
+    const create = jest.fn().mockResolvedValue({ data: { number: 42, html_url: 'https://github.com/owner/repo/pull/42' } })
+    const octokit = { rest: { pulls: { create }, issues: {} } }
+    await createOrGetPr({
+      ...baseOpts,
+      octokit: octokit as never,
+      prTitle: 'chore: bump {tool} to {version}',
+      prBody: 'Upgrades {tool} → {version}.',
+    })
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'chore: bump actionlint to 1.7.13',
+      body: 'Upgrades actionlint → 1.7.13.',
+    }))
   })
 
   it('falls back to existing PR on 422 error', async () => {

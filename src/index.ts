@@ -20,6 +20,8 @@ export async function run(): Promise<void> {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
+  const prTitle = core.getInput('pr-title') || 'deps: Upgrade {tool} to {version}'
+  const prBody = core.getInput('pr-body') || 'Automated upgrade of {tool} to {version}.'
 
   const octokit = github.getOctokit(token)
   const { owner, repo } = github.context.repo
@@ -85,6 +87,8 @@ export async function run(): Promise<void> {
     baseBranch,
     labels,
     assignees,
+    prTitle,
+    prBody,
   })
 
   core.setOutput('pr-url', prUrl)
