@@ -30055,6 +30055,8 @@ async function run() {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+    const prTitle = core.getInput('pr-title');
+    const prBody = core.getInput('pr-body');
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
     const repository = `${owner}/${repo}`;
@@ -30110,6 +30112,8 @@ async function run() {
         baseBranch,
         labels,
         assignees,
+        prTitle,
+        prBody,
     });
     core.setOutput('pr-url', prUrl);
     core.info(`Pull request: ${prUrl}`);
@@ -30245,6 +30249,7 @@ async function findLatestVersion(tool) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderTemplate = renderTemplate;
 exports.findOpenPr = findOpenPr;
 exports.findOutdatedPrs = findOutdatedPrs;
 exports.closeOutdatedPrs = closeOutdatedPrs;
@@ -30268,6 +30273,9 @@ function rethrowWithContext(err, context) {
         throw new Error(`GitHub API error ${status} during ${context}: ${originalMessage}`, { cause: err });
     }
     throw err;
+}
+function renderTemplate(template, tool, version) {
+    return template.replace(/\{tool\}/g, () => tool).replace(/\{version\}/g, () => version);
 }
 async function findOpenPr(octokit, owner, repo, branch) {
     try {
@@ -30301,15 +30309,15 @@ async function closeOutdatedPrs(octokit, owner, repo, prs) {
     }
 }
 async function createOrGetPr(opts) {
-    const { octokit, owner, repo, tool, version, branch, baseBranch, labels, assignees } = opts;
+    const { octokit, owner, repo, tool, version, branch, baseBranch, labels, assignees, prTitle, prBody } = opts;
     let prNumber;
     let prUrl;
     try {
         const { data } = await octokit.rest.pulls.create({
             owner,
             repo,
-            title: `deps: Upgrade ${tool} to ${version}`,
-            body: `Automated upgrade of ${tool} to ${version}.`,
+            title: renderTemplate(prTitle, tool, version),
+            body: renderTemplate(prBody, tool, version),
             base: baseBranch,
             head: branch,
         });

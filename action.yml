@@ -29,6 +29,14 @@ inputs:
     description: 'Pass --bump to mise upgrade to update version constraints in mise.toml'
     required: false
     default: 'true'
+  pr-title:
+    description: 'PR title template. Supports {tool} and {version} placeholders.'
+    required: false
+    default: 'deps: Upgrade {tool} to {version}'
+  pr-body:
+    description: 'PR body template. Supports {tool} and {version} placeholders.'
+    required: false
+    default: 'Automated upgrade of {tool} to {version}.'
 
 outputs:
   pr-url:
@@ -58,5 +66,7 @@ runs:
         INPUT_LABELS: ${{ inputs.labels }}
         INPUT_ASSIGNEES: ${{ inputs.assignees }}
         INPUT_BUMP: ${{ inputs.bump }}
+        INPUT_PR-TITLE: ${{ inputs.pr-title }}
+        INPUT_PR-BODY: ${{ inputs.pr-body }}
         GITHUB_TOKEN: ${{ inputs.token }}
       run: node "${{ github.action_path }}/dist/index.js"
