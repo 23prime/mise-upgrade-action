@@ -116,9 +116,12 @@ jobs:
 
 ### Token permission errors
 
-The action requires `contents: write` and `pull-requests: write`. If you see
-`GitHub API authentication failed (401)`, check that the token is passed
-correctly and the job has the required permissions declared.
+The action requires `contents: write` and `pull-requests: write`. If you use
+the `labels` or `assignees` inputs, it also requires `issues: write` to update
+PR labels/assignees via the GitHub Issues API. If you see `GitHub API
+authentication failed (401)` or other permission-related failures such as `403`,
+check that the token is passed correctly and the job has the required
+permissions declared.
 
 ### Tool not found in `mise.toml`
 
@@ -134,8 +137,14 @@ When the tool is already at the latest version, the action exits early and sets
 ### Rate limit errors when running a matrix
 
 Running many matrix jobs in parallel can hit GitHub API rate limits.
-The action surfaces these as `GitHub API rate limit or permission error (429)`.
-Add `max-parallel` to your matrix strategy to limit concurrency, or stagger runs.
+The action surfaces these as `GitHub API rate limit or permission error (429)` or
+`GitHub API rate limit or permission error (403)`.
+
+A `429` usually indicates rate limiting. A `403` can also happen due to rate
+limiting or abuse protection, and may indicate missing token permissions
+(for example, `issues: write` when using labels or assignees).
+Add `max-parallel` to your matrix strategy to limit concurrency, stagger runs,
+and verify the token has the required permissions.
 
 ### PR already exists for the same version
 
