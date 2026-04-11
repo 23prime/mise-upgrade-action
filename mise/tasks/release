@@ -56,23 +56,15 @@ if ! git diff --quiet HEAD; then
   exit 1
 fi
 
-# Build dist
-printf "Building dist...\n"
-mise run build
-dist_changed=false
-if [ -n "$(git status --porcelain -- dist/)" ]; then
-  dist_changed=true
-fi
+# Verify dist is up to date
+printf "Verifying dist...\n"
+mise run dist-check
 
 sha=$(git rev-parse HEAD)
 major_tag="v$(echo "$tag" | sed 's/^v//; s/\..*//')"
 
 # Confirm
-if [[ "$dist_changed" == true ]]; then
-  printf "Create release %s (floating tag: %s), commit updated dist, and push? [y/N] " "$tag" "$major_tag"
-else
-  printf "Create release %s (floating tag: %s) at commit %s? [y/N] " "$tag" "$major_tag" "$sha"
-fi
+printf "Create release %s (floating tag: %s) at commit %s? [y/N] " "$tag" "$major_tag" "$sha"
 if [[ "$yes" == false ]]; then
   read -r answer
   if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
@@ -81,13 +73,6 @@ if [[ "$yes" == false ]]; then
   fi
 else
   printf "y (--yes)\n"
-fi
-
-# Commit dist if changed
-if [[ "$dist_changed" == true ]]; then
-  git add -A dist/
-  git commit -m "build: Update dist for ${tag}"
-  sha=$(git rev-parse HEAD)
 fi
 
 # Create annotated tag and push

@@ -75,11 +75,11 @@ Create a pull request following the [template](../.github/PULL_REQUEST_TEMPLATE.
 
 ## Release
 
-Releases are tag-based. The `dist/index.js` bundle is only updated at release time — `main` does not contain a built artifact between releases.
+Releases are tag-based. `dist/index.js` is committed alongside every `src/` change (see [TypeScript](#typescript) above), so `main` always contains an up-to-date artifact.
 
 **Rule: release promptly after merging to `main`.**
 
-Any merged PR that touches `src/` must be followed by a release before the dogfood workflow will reflect the change. Do not leave `main` in an unreleased state for extended periods.
+Do not leave `main` in an unreleased state for extended periods.
 
 ### Version bump guidelines
 
@@ -95,7 +95,6 @@ mise run release -- <major|minor|patch>
 
 The release task will:
 
-1. Build `dist/` from the current `src/`
-2. Commit the updated `dist/` if it changed
-3. Prompt for confirmation, then create an annotated tag and push
-4. CI picks up the tag and creates the GitHub Release with the floating major tag (e.g. `v1`)
+1. Run `mise run build` and verify `dist/index.js` is up to date (fails if stale)
+2. Prompt for confirmation, then create an annotated tag and push
+3. CI picks up the tag and creates the GitHub Release with the floating major tag (e.g. `v1`)
