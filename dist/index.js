@@ -30058,7 +30058,9 @@ async function run() {
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
     const repository = `${owner}/${repo}`;
-    // 1. Check for update
+    // 1. Validate tool exists in mise.toml
+    await (0, upgrade_1.validateToolExists)(tool);
+    // 2. Check for update
     const latestVersion = await (0, outdated_1.findLatestVersion)(tool);
     if (!latestVersion) {
         core.info(`${tool} is already up to date.`);
@@ -30067,16 +30069,16 @@ async function run() {
     }
     core.info(`${tool} -> ${latestVersion}`);
     core.setOutput('changed', 'true');
-    // 2. Upgrade
+    // 3. Upgrade
     await (0, upgrade_1.upgradeTool)(tool, bump);
     const newVersion = await (0, upgrade_1.currentVersion)(tool);
     if (!newVersion) {
         throw new Error(`Unable to determine current version for "${tool}" after upgrade`);
     }
-    // 3. Determine branch
+    // 4. Determine branch
     const branch = (0, git_1.branchName)(branchPrefix, tool, newVersion);
     const toolPrefix = `${branchPrefix}/${(0, git_1.safeTool)(tool)}-`;
-    // 4. Skip if open PR already exists for this exact version
+    // 5. Skip if open PR already exists for this exact version
     await (0, git_1.configureGit)(token, repository);
     const existingPrNumber = await (0, pr_1.findOpenPr)(octokit, owner, repo, branch);
     if (existingPrNumber !== null) {
@@ -30085,19 +30087,19 @@ async function run() {
         core.info(`Open PR already exists for ${tool} ${newVersion}: ${existingPrUrl}`);
         return;
     }
-    // 5. Close outdated PRs for the same tool
+    // 6. Close outdated PRs for the same tool
     const outdatedPrs = await (0, pr_1.findOutdatedPrs)(octokit, owner, repo, toolPrefix, branch);
     if (outdatedPrs.length > 0) {
         core.info(`Closing ${outdatedPrs.length} outdated PR(s) for ${tool}`);
         await (0, pr_1.closeOutdatedPrs)(octokit, owner, repo, outdatedPrs);
     }
-    // 6. Commit and push
+    // 7. Commit and push
     await (0, git_1.checkoutBranch)(branch);
     await (0, git_1.commitAndPush)(tool, newVersion, branch);
-    // 7. Get default branch
+    // 8. Get default branch
     const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
     const baseBranch = repoData.default_branch;
-    // 8. Create or get PR
+    // 9. Create or get PR
     const prUrl = await (0, pr_1.createOrGetPr)({
         octokit,
         owner,
@@ -30380,9 +30382,31 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateToolExists = validateToolExists;
 exports.upgradeTool = upgradeTool;
 exports.currentVersion = currentVersion;
 const exec = __importStar(__nccwpck_require__(2851));
+async function validateToolExists(tool) {
+    let stdout = '';
+    let exitCode;
+    try {
+        exitCode = await exec.exec('mise', ['ls', '--current', '--json', tool], {
+            listeners: {
+                stdout: (data) => {
+                    stdout += data.toString();
+                },
+            },
+            silent: true,
+            ignoreReturnCode: true,
+        });
+    }
+    catch {
+        throw new Error(`Tool "${tool}" is not managed by mise. Add it to mise.toml first.`);
+    }
+    if (exitCode !== 0 || stdout.trim() === '{}' || stdout.trim() === '[]' || stdout.trim() === '') {
+        throw new Error(`Tool "${tool}" is not managed by mise. Add it to mise.toml first.`);
+    }
+}
 async function upgradeTool(tool, bump) {
     const args = ['upgrade'];
     if (bump)

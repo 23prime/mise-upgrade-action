@@ -18,6 +18,7 @@ const mockSetOutput = core.setOutput as jest.MockedFunction<typeof core.setOutpu
 const mockGetOctokit = github.getOctokit as jest.MockedFunction<typeof github.getOctokit>
 
 const mockFindLatestVersion = outdated.findLatestVersion as jest.MockedFunction<typeof outdated.findLatestVersion>
+const mockValidateToolExists = upgrade.validateToolExists as jest.MockedFunction<typeof upgrade.validateToolExists>
 const mockUpgradeTool = upgrade.upgradeTool as jest.MockedFunction<typeof upgrade.upgradeTool>
 const mockCurrentVersion = upgrade.currentVersion as jest.MockedFunction<typeof upgrade.currentVersion>
 const mockBranchName = git.branchName as jest.MockedFunction<typeof git.branchName>
@@ -67,6 +68,7 @@ beforeEach(() => {
 
   mockGetOctokit.mockReturnValue(octokitMock as never)
 
+  mockValidateToolExists.mockResolvedValue()
   mockFindLatestVersion.mockResolvedValue(VERSION)
   mockUpgradeTool.mockResolvedValue()
   mockCurrentVersion.mockResolvedValue(VERSION)
@@ -82,6 +84,12 @@ beforeEach(() => {
 })
 
 describe('run', () => {
+  it('throws when tool does not exist in mise.toml', async () => {
+    mockValidateToolExists.mockRejectedValue(new Error('Tool "actionlint" is not managed by mise'))
+    await expect(run()).rejects.toThrow('Tool "actionlint" is not managed by mise')
+    expect(mockFindLatestVersion).not.toHaveBeenCalled()
+  })
+
   it('sets changed=false and returns early when tool is up to date', async () => {
     mockFindLatestVersion.mockResolvedValue(null)
     await run()
