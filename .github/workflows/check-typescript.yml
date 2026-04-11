@@ -7,6 +7,7 @@ on:
     paths:
       - "src/**"
       - "__tests__/**"
+      - "mise.toml"
       - "package.json"
       - "pnpm-lock.yaml"
       - "tsconfig.json"
@@ -16,6 +17,7 @@ on:
     paths:
       - "src/**"
       - "__tests__/**"
+      - "mise.toml"
       - "package.json"
       - "pnpm-lock.yaml"
       - "tsconfig.json"
