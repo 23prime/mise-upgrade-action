@@ -25,6 +25,14 @@ describe('findOpenPr', () => {
     const result = await findOpenPr(octokit as never, 'owner', 'repo', 'mise-upgrade/actionlint-1.7.13')
     expect(result).toBeNull()
   })
+
+  it('throws auth error on 401', async () => {
+    const err = Object.assign(new Error('Unauthorized'), { status: 401 })
+    const octokit = { rest: { pulls: { list: jest.fn().mockRejectedValue(err) } } }
+    await expect(findOpenPr(octokit as never, 'owner', 'repo', 'branch')).rejects.toThrow(
+      'GitHub API authentication failed (401)',
+    )
+  })
 })
 
 describe('findOutdatedPrs', () => {
@@ -127,6 +135,15 @@ describe('createOrGetPr', () => {
     )
   })
 
+  it('throws rate limit error message on 403', async () => {
+    const err = Object.assign(new Error('forbidden'), { status: 403 })
+    const create = jest.fn().mockRejectedValue(err)
+    const octokit = { rest: { pulls: { create }, issues: {} } }
+    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
+      'GitHub API rate limit or permission error (403)',
+    )
+  })
+
   it('throws rate limit error message on 429', async () => {
     const err = Object.assign(new Error('rate limited'), { status: 429 })
     const create = jest.fn().mockRejectedValue(err)
@@ -141,7 +158,7 @@ describe('createOrGetPr', () => {
     const create = jest.fn().mockRejectedValue(err)
     const octokit = { rest: { pulls: { create }, issues: {} } }
     await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
-      'GitHub API error 500 during createPr',
+      'GitHub API error 500 during createPr: server error',
     )
   })
 

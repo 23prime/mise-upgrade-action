@@ -30220,8 +30220,9 @@ async function getOutdatedTools() {
     try {
         parsed = JSON.parse(stdout);
     }
-    catch {
-        throw new Error(`Failed to parse mise outdated output as JSON: ${stdout.slice(0, 200)}`);
+    catch (err) {
+        const reason = err instanceof Error ? `: ${err.message}` : '';
+        throw new Error(`Failed to parse mise outdated output as JSON${reason}: ${stdout.slice(0, 200)}`, { cause: err });
     }
     if (Array.isArray(parsed))
         return parsed;
@@ -30247,21 +30248,22 @@ exports.findOutdatedPrs = findOutdatedPrs;
 exports.closeOutdatedPrs = closeOutdatedPrs;
 exports.createOrGetPr = createOrGetPr;
 function httpStatus(err) {
-    if (err instanceof Error && 'status' in err) {
+    if (err instanceof Error && 'status' in err && typeof err.status === 'number') {
         return err.status;
     }
     return undefined;
 }
 function rethrowWithContext(err, context) {
     const status = httpStatus(err);
+    const originalMessage = err instanceof Error ? err.message : String(err);
     if (status === 401) {
-        throw new Error(`GitHub API authentication failed (401). Check that the token has the required permissions (contents: write, pull-requests: write).`);
+        throw new Error(`GitHub API authentication failed (401). Check that the token has the required permissions (contents: write, pull-requests: write). Original error: ${originalMessage}`, { cause: err });
     }
     if (status === 403 || status === 429) {
-        throw new Error(`GitHub API rate limit or permission error (${status}). Try again later or check token scopes.`);
+        throw new Error(`GitHub API rate limit or permission error (${status}). Try again later or check token scopes. Original error: ${originalMessage}`, { cause: err });
     }
     if (status !== undefined) {
-        throw new Error(`GitHub API error ${status} during ${context}: ${err instanceof Error ? err.message : String(err)}`);
+        throw new Error(`GitHub API error ${status} during ${context}: ${originalMessage}`, { cause: err });
     }
     throw err;
 }
