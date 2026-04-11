@@ -16,7 +16,9 @@ export async function getOutdatedTools(): Promise<OutdatedEntry[]> {
     },
     silent: true,
   })
-  return JSON.parse(stdout) as OutdatedEntry[]
+  const parsed: unknown = JSON.parse(stdout)
+  if (Array.isArray(parsed)) return parsed as OutdatedEntry[]
+  return Object.values(parsed as Record<string, OutdatedEntry>)
 }
 
 export async function findLatestVersion(tool: string): Promise<string | null> {
