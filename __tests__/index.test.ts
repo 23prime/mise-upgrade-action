@@ -136,4 +136,57 @@ describe('run', () => {
       `Unable to determine current version for "${TOOL}" after upgrade`,
     )
   })
+
+  it('does not set MISE_INSTALL_BEFORE when install-before is whitespace only', async () => {
+    const originalEnv = process.env['MISE_INSTALL_BEFORE']
+    try {
+      delete process.env['MISE_INSTALL_BEFORE']
+      mockGetInput.mockImplementation((name: string) => {
+        if (name === 'install-before') return '   '
+        const inputs: Record<string, string> = {
+          token: 'gh-token',
+          tool: TOOL,
+          'branch-prefix': 'mise-upgrade',
+          bump: 'true',
+          labels: '',
+          assignees: '',
+        }
+        return inputs[name] ?? ''
+      })
+      await run()
+      expect(process.env['MISE_INSTALL_BEFORE']).toBeUndefined()
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env['MISE_INSTALL_BEFORE']
+      } else {
+        process.env['MISE_INSTALL_BEFORE'] = originalEnv
+      }
+    }
+  })
+
+  it('sets MISE_INSTALL_BEFORE env var when install-before input is provided', async () => {
+    const originalEnv = process.env['MISE_INSTALL_BEFORE']
+    try {
+      mockGetInput.mockImplementation((name: string) => {
+        if (name === 'install-before') return '3d'
+        const inputs: Record<string, string> = {
+          token: 'gh-token',
+          tool: TOOL,
+          'branch-prefix': 'mise-upgrade',
+          bump: 'true',
+          labels: '',
+          assignees: '',
+        }
+        return inputs[name] ?? ''
+      })
+      await run()
+      expect(process.env['MISE_INSTALL_BEFORE']).toBe('3d')
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env['MISE_INSTALL_BEFORE']
+      } else {
+        process.env['MISE_INSTALL_BEFORE'] = originalEnv
+      }
+    }
+  })
 })

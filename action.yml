@@ -37,6 +37,13 @@ inputs:
     description: 'PR body template. Supports {tool} and {version} placeholders.'
     required: false
     default: 'Automated upgrade of {tool} to {version}.'
+  install-before:
+    description: >-
+      Minimum age of a tool release before it is eligible for upgrade
+      (e.g. "3d", "1w"). Forwarded to mise as MISE_INSTALL_BEFORE.
+      Leave empty to use the mise.toml default.
+    required: false
+    default: ''
 
 outputs:
   pr-url:
@@ -68,5 +75,6 @@ runs:
         INPUT_BUMP: ${{ inputs.bump }}
         INPUT_PR-TITLE: ${{ inputs.pr-title }}
         INPUT_PR-BODY: ${{ inputs.pr-body }}
+        INPUT_INSTALL-BEFORE: ${{ inputs.install-before }}
         GITHUB_TOKEN: ${{ inputs.token }}
       run: node "${{ github.action_path }}/dist/index.js"

@@ -30057,6 +30057,10 @@ async function run() {
         .filter(Boolean);
     const prTitle = core.getInput('pr-title');
     const prBody = core.getInput('pr-body');
+    const installBefore = core.getInput('install-before').trim();
+    if (installBefore) {
+        process.env['MISE_INSTALL_BEFORE'] = installBefore;
+    }
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
     const repository = `${owner}/${repo}`;

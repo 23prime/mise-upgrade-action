@@ -106,6 +106,7 @@ jobs:
 | `bump` | No | `true` | Pass `--bump` to `mise upgrade` to update version constraints in `mise.toml`. |
 | `pr-title` | No | `deps: Upgrade {tool} to {version}` | PR title template. Supports `{tool}` and `{version}` placeholders. |
 | `pr-body` | No | `Automated upgrade of {tool} to {version}.` | PR body template. Supports `{tool}` and `{version}` placeholders. |
+| `install-before` | No | `` | Minimum age of a tool release before it is eligible for upgrade (e.g. `3d`, `1w`). Forwarded to mise as `MISE_INSTALL_BEFORE`. Reduces supply chain risk by avoiding immediately-released versions. |
 
 ## Outputs
 
