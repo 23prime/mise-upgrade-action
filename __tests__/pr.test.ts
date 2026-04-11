@@ -118,11 +118,31 @@ describe('createOrGetPr', () => {
     expect(url).toBe('https://github.com/owner/repo/pull/99')
   })
 
-  it('rethrows non-422 errors', async () => {
+  it('throws auth error message on 401', async () => {
+    const err = Object.assign(new Error('Unauthorized'), { status: 401 })
+    const create = jest.fn().mockRejectedValue(err)
+    const octokit = { rest: { pulls: { create }, issues: {} } }
+    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
+      'GitHub API authentication failed (401)',
+    )
+  })
+
+  it('throws rate limit error message on 429', async () => {
+    const err = Object.assign(new Error('rate limited'), { status: 429 })
+    const create = jest.fn().mockRejectedValue(err)
+    const octokit = { rest: { pulls: { create }, issues: {} } }
+    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
+      'GitHub API rate limit or permission error (429)',
+    )
+  })
+
+  it('throws contextual error message on other HTTP errors', async () => {
     const err = Object.assign(new Error('server error'), { status: 500 })
     const create = jest.fn().mockRejectedValue(err)
     const octokit = { rest: { pulls: { create }, issues: {} } }
-    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow('server error')
+    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
+      'GitHub API error 500 during createPr',
+    )
   })
 
   it('applies labels and assignees after creating PR', async () => {

@@ -2,6 +2,27 @@ import * as github from '@actions/github'
 
 type Octokit = ReturnType<typeof github.getOctokit>
 
+function httpStatus(err: unknown): number | undefined {
+  if (err instanceof Error && 'status' in err) {
+    return (err as { status: number }).status
+  }
+  return undefined
+}
+
+function rethrowWithContext(err: unknown, context: string): never {
+  const status = httpStatus(err)
+  if (status === 401) {
+    throw new Error(`GitHub API authentication failed (401). Check that the token has the required permissions (contents: write, pull-requests: write).`)
+  }
+  if (status === 403 || status === 429) {
+    throw new Error(`GitHub API rate limit or permission error (${status}). Try again later or check token scopes.`)
+  }
+  if (status !== undefined) {
+    throw new Error(`GitHub API error ${status} during ${context}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+  throw err
+}
+
 export interface PrOptions {
   octokit: Octokit
   owner: string
@@ -20,13 +41,17 @@ export async function findOpenPr(
   repo: string,
   branch: string,
 ): Promise<number | null> {
-  const { data } = await octokit.rest.pulls.list({
-    owner,
-    repo,
-    head: `${owner}:${branch}`,
-    state: 'open',
-  })
-  return data[0]?.number ?? null
+  try {
+    const { data } = await octokit.rest.pulls.list({
+      owner,
+      repo,
+      head: `${owner}:${branch}`,
+      state: 'open',
+    })
+    return data[0]?.number ?? null
+  } catch (err: unknown) {
+    rethrowWithContext(err, 'findOpenPr')
+  }
 }
 
 export async function findOutdatedPrs(
@@ -77,9 +102,7 @@ export async function createOrGetPr(opts: PrOptions): Promise<string> {
     prNumber = data.number
     prUrl = data.html_url
   } catch (err: unknown) {
-    const isConflict =
-      err instanceof Error && 'status' in err && (err as { status: number }).status === 422
-    if (!isConflict) throw err
+    if (httpStatus(err) !== 422) rethrowWithContext(err, 'createPr')
     const existing = await octokit.rest.pulls.list({
       owner,
       repo,

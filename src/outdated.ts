@@ -16,7 +16,12 @@ export async function getOutdatedTools(): Promise<OutdatedEntry[]> {
     },
     silent: true,
   })
-  const parsed: unknown = JSON.parse(stdout)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(stdout)
+  } catch {
+    throw new Error(`Failed to parse mise outdated output as JSON: ${stdout.slice(0, 200)}`)
+  }
   if (Array.isArray(parsed)) return parsed as OutdatedEntry[]
   return Object.values(parsed as Record<string, OutdatedEntry>)
 }

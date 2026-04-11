@@ -42,6 +42,11 @@ describe('getOutdatedTools', () => {
       ]),
     )
   })
+
+  it('throws a clear error when output is not valid JSON', async () => {
+    setupExecMock('not json output')
+    await expect(getOutdatedTools()).rejects.toThrow('Failed to parse mise outdated output as JSON')
+  })
 })
 
 describe('findLatestVersion', () => {
