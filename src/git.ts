@@ -15,12 +15,11 @@ export async function configureGit(token: string, repository: string): Promise<v
     'user.email',
     '41898282+github-actions[bot]@users.noreply.github.com',
   ])
-  await exec.exec('git', [
-    'remote',
-    'set-url',
-    'origin',
-    `https://x-access-token:${token}@github.com/${repository}.git`,
-  ])
+  await exec.exec(
+    'git',
+    ['remote', 'set-url', 'origin', `https://x-access-token:${token}@github.com/${repository}.git`],
+    { silent: true },
+  )
 }
 
 export async function checkoutBranch(branch: string): Promise<void> {
