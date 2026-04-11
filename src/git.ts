@@ -29,5 +29,6 @@ export async function checkoutBranch(branch: string): Promise<void> {
 export async function commitAndPush(tool: string, version: string, branch: string): Promise<void> {
   await exec.exec('git', ['add', 'mise.toml', 'mise.lock'])
   await exec.exec('git', ['commit', '-m', `deps: Upgrade ${tool} to ${version}`])
+  await exec.exec('git', ['fetch', 'origin', branch], { ignoreReturnCode: true })
   await exec.exec('git', ['push', '--force-with-lease', 'origin', branch])
 }

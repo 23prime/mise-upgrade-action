@@ -29988,6 +29988,7 @@ async function checkoutBranch(branch) {
 async function commitAndPush(tool, version, branch) {
     await exec.exec('git', ['add', 'mise.toml', 'mise.lock']);
     await exec.exec('git', ['commit', '-m', `deps: Upgrade ${tool} to ${version}`]);
+    await exec.exec('git', ['fetch', 'origin', branch], { ignoreReturnCode: true });
     await exec.exec('git', ['push', '--force-with-lease', 'origin', branch]);
 }
 
