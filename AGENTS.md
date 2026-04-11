@@ -42,7 +42,7 @@ mise run setup   # trust, install tools, install pnpm deps, install lefthook hoo
 
 ## Git Hooks
 
-Both `pre-commit` and `pre-push` run `mise check` via lefthook. The `pre-commit` hook also verifies that `dist/index.js` is staged whenever `src/` changes are staged.
+Both `pre-commit` and `pre-push` run `mise check` via lefthook. `mise check` includes `dist-check`, which builds and verifies that `dist/index.js` is up to date with `src/`.
 
 ## Code Style
 

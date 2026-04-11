@@ -60,8 +60,8 @@ chore: Update linter configuration
 The action logic (`src/`) is written in TypeScript and bundled into `dist/index.js` via `@vercel/ncc`.
 
 - After modifying `src/`, run `mise run build` and commit `dist/index.js` together with your source changes.
-- The pre-commit hook will reject commits that stage `src/` changes without also staging `dist/index.js`.
-- CI verifies that the committed `dist/index.js` matches a fresh build.
+- The pre-commit hook runs `mise check`, which includes `dist-check` — it builds and verifies that `dist/index.js` is up to date. The commit will be rejected if `dist/index.js` is stale.
+- CI also runs `dist-check` to verify the committed `dist/index.js` matches a fresh build.
 
 ## Quality Assurance
 
