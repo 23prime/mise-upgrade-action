@@ -22,6 +22,10 @@ export async function run(): Promise<void> {
     .filter(Boolean)
   const prTitle = core.getInput('pr-title')
   const prBody = core.getInput('pr-body')
+  const installBefore = core.getInput('install-before').trim()
+  if (installBefore) {
+    process.env['MISE_INSTALL_BEFORE'] = installBefore
+  }
 
   const octokit = github.getOctokit(token)
   const { owner, repo } = github.context.repo
@@ -94,4 +98,3 @@ export async function run(): Promise<void> {
   core.setOutput('pr-url', prUrl)
   core.info(`Pull request: ${prUrl}`)
 }
-
