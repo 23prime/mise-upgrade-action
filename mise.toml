@@ -46,7 +46,7 @@ alias = "f"
 
 [tasks.check]
 description = "Check for all issues"
-depends = ["md-check", "gh-check", "spell-check", "ts-check"]
+depends = ["md-check", "gh-check", "spell-check", "ts-check", "dist-check"]
 alias = "c"
 
 [tasks.fix-and-check]

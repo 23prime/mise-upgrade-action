@@ -7,6 +7,8 @@ on:
     paths:
       - "src/**"
       - "__tests__/**"
+      - "dist/index.js"
+      - "mise/tasks/**"
       - "mise.toml"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -17,6 +19,8 @@ on:
     paths:
       - "src/**"
       - "__tests__/**"
+      - "dist/index.js"
+      - "mise/tasks/**"
       - "mise.toml"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -49,3 +53,6 @@ jobs:
 
       - name: Check
         run: mise run ts-check
+
+      - name: Check dist freshness
+        run: mise run dist-check
