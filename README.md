@@ -111,3 +111,34 @@ jobs:
 | --- | --- |
 | `pr-url` | URL of the created or updated pull request. |
 | `changed` | `"true"` if the tool version changed after the upgrade. |
+
+## Troubleshooting
+
+### Token permission errors
+
+The action requires `contents: write` and `pull-requests: write`. If you see
+`GitHub API authentication failed (401)`, check that the token is passed
+correctly and the job has the required permissions declared.
+
+### Tool not found in `mise.toml`
+
+If the tool name does not exist in `mise.toml`, the action fails with:
+`Tool "<name>" is not managed by mise. Add it to mise.toml first.`
+Add the tool to `mise.toml` (e.g. `mise use actionlint`) before running the action.
+
+### No upgrades available
+
+When the tool is already at the latest version, the action exits early and sets
+`changed: "false"`. No commit or PR is created. This is expected behavior.
+
+### Rate limit errors when running a matrix
+
+Running many matrix jobs in parallel can hit GitHub API rate limits.
+The action surfaces these as `GitHub API rate limit or permission error (429)`.
+Add `max-parallel` to your matrix strategy to limit concurrency, or stagger runs.
+
+### PR already exists for the same version
+
+If an open PR already exists for the same tool at the same version, the action
+skips creating a new one and outputs the existing PR's URL. No duplicate PRs are
+created. PRs for *older* versions of the same tool are closed automatically.
