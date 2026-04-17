@@ -38,10 +38,11 @@ mise run setup   # trust, install tools, install pnpm deps, install lefthook hoo
 | `i` | `install` | Install Node.js dependencies (frozen lockfile) |
 | `b` | `build` | Build TypeScript → dist/ |
 | `tc` | `ts-check` | Type-check TypeScript and run tests |
+| `dc` | `dist-check` | Check that dist/index.js is up to date with src/ |
 
 ## Git Hooks
 
-Both `pre-commit` and `pre-push` run `mise check` via lefthook.
+Both `pre-commit` and `pre-push` run `mise check` via lefthook. `mise check` includes `dist-check`, which builds and verifies that `dist/index.js` is up to date with `src/`.
 
 ## Code Style
 

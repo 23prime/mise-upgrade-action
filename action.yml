@@ -29,6 +29,21 @@ inputs:
     description: 'Pass --bump to mise upgrade to update version constraints in mise.toml'
     required: false
     default: 'true'
+  pr-title:
+    description: 'PR title template. Supports {tool} and {version} placeholders.'
+    required: false
+    default: 'deps: Upgrade {tool} to {version}'
+  pr-body:
+    description: 'PR body template. Supports {tool} and {version} placeholders.'
+    required: false
+    default: 'Automated upgrade of {tool} to {version}.'
+  install-before:
+    description: >-
+      Minimum age of a tool release before it is eligible for upgrade
+      (e.g. "3d", "1w"). Forwarded to mise as MISE_INSTALL_BEFORE.
+      Leave empty to use the mise.toml default.
+    required: false
+    default: ''
 
 outputs:
   pr-url:
@@ -58,5 +73,8 @@ runs:
         INPUT_LABELS: ${{ inputs.labels }}
         INPUT_ASSIGNEES: ${{ inputs.assignees }}
         INPUT_BUMP: ${{ inputs.bump }}
+        INPUT_PR-TITLE: ${{ inputs.pr-title }}
+        INPUT_PR-BODY: ${{ inputs.pr-body }}
+        INPUT_INSTALL-BEFORE: ${{ inputs.install-before }}
         GITHUB_TOKEN: ${{ inputs.token }}
       run: node "${{ github.action_path }}/dist/index.js"

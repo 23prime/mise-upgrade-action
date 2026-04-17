@@ -1,4 +1,4 @@
-import { findOpenPr, findOutdatedPrs, closeOutdatedPrs, createOrGetPr } from '../src/pr'
+import { findOpenPr, findOutdatedPrs, closeOutdatedPrs, createOrGetPr, renderTemplate } from '../src/pr'
 
 function makeOctokit(prs: Array<{ number: number; head: { ref: string }; html_url: string }>) {
   const listFn = jest.fn().mockResolvedValue({ data: prs })
@@ -24,6 +24,14 @@ describe('findOpenPr', () => {
     const octokit = makeOctokit([])
     const result = await findOpenPr(octokit as never, 'owner', 'repo', 'mise-upgrade/actionlint-1.7.13')
     expect(result).toBeNull()
+  })
+
+  it('throws auth error on 401', async () => {
+    const err = Object.assign(new Error('Unauthorized'), { status: 401 })
+    const octokit = { rest: { pulls: { list: jest.fn().mockRejectedValue(err) } } }
+    await expect(findOpenPr(octokit as never, 'owner', 'repo', 'branch')).rejects.toThrow(
+      'GitHub API authentication failed (401)',
+    )
   })
 })
 
@@ -89,6 +97,22 @@ describe('closeOutdatedPrs', () => {
   })
 })
 
+describe('renderTemplate', () => {
+  it('replaces {tool} and {version} placeholders', () => {
+    expect(renderTemplate('deps: Upgrade {tool} to {version}', 'actionlint', '1.7.13')).toBe(
+      'deps: Upgrade actionlint to 1.7.13',
+    )
+  })
+
+  it('replaces multiple occurrences', () => {
+    expect(renderTemplate('{tool} {tool} {version}', 'node', '22.0.0')).toBe('node node 22.0.0')
+  })
+
+  it('leaves template unchanged when no placeholders match', () => {
+    expect(renderTemplate('no placeholders here', 'tool', '1.0')).toBe('no placeholders here')
+  })
+})
+
 describe('createOrGetPr', () => {
   const baseOpts = {
     owner: 'owner',
@@ -99,6 +123,8 @@ describe('createOrGetPr', () => {
     baseBranch: 'main',
     labels: [],
     assignees: [],
+    prTitle: 'deps: Upgrade {tool} to {version}',
+    prBody: 'Automated upgrade of {tool} to {version}.',
   }
 
   it('creates a new PR and returns its URL', async () => {
@@ -107,6 +133,21 @@ describe('createOrGetPr', () => {
     const url = await createOrGetPr({ ...baseOpts, octokit: octokit as never })
     expect(create).toHaveBeenCalledTimes(1)
     expect(url).toBe('https://github.com/owner/repo/pull/42')
+  })
+
+  it('renders title and body templates before creating PR', async () => {
+    const create = jest.fn().mockResolvedValue({ data: { number: 42, html_url: 'https://github.com/owner/repo/pull/42' } })
+    const octokit = { rest: { pulls: { create }, issues: {} } }
+    await createOrGetPr({
+      ...baseOpts,
+      octokit: octokit as never,
+      prTitle: 'chore: bump {tool} to {version}',
+      prBody: 'Upgrades {tool} → {version}.',
+    })
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'chore: bump actionlint to 1.7.13',
+      body: 'Upgrades actionlint → 1.7.13.',
+    }))
   })
 
   it('falls back to existing PR on 422 error', async () => {
@@ -118,11 +159,40 @@ describe('createOrGetPr', () => {
     expect(url).toBe('https://github.com/owner/repo/pull/99')
   })
 
-  it('rethrows non-422 errors', async () => {
+  it('throws auth error message on 401', async () => {
+    const err = Object.assign(new Error('Unauthorized'), { status: 401 })
+    const create = jest.fn().mockRejectedValue(err)
+    const octokit = { rest: { pulls: { create }, issues: {} } }
+    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
+      'GitHub API authentication failed (401)',
+    )
+  })
+
+  it('throws rate limit error message on 403', async () => {
+    const err = Object.assign(new Error('forbidden'), { status: 403 })
+    const create = jest.fn().mockRejectedValue(err)
+    const octokit = { rest: { pulls: { create }, issues: {} } }
+    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
+      'GitHub API rate limit or permission error (403)',
+    )
+  })
+
+  it('throws rate limit error message on 429', async () => {
+    const err = Object.assign(new Error('rate limited'), { status: 429 })
+    const create = jest.fn().mockRejectedValue(err)
+    const octokit = { rest: { pulls: { create }, issues: {} } }
+    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
+      'GitHub API rate limit or permission error (429)',
+    )
+  })
+
+  it('throws contextual error message on other HTTP errors', async () => {
     const err = Object.assign(new Error('server error'), { status: 500 })
     const create = jest.fn().mockRejectedValue(err)
     const octokit = { rest: { pulls: { create }, issues: {} } }
-    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow('server error')
+    await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
+      'GitHub API error 500 during createPr: server error',
+    )
   })
 
   it('applies labels and assignees after creating PR', async () => {

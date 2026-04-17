@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#MISE description="Check that dist/index.js is up to date with src/"
+set -euo pipefail
+
+mise run build
+if ! git diff --quiet -- dist/index.js; then
+  printf "dist/index.js is out of date. Run 'mise run build' and commit the result.\n" >&2
+  git diff -- dist/index.js
+  exit 1
+fi

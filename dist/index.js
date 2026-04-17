@@ -29980,12 +29980,7 @@ async function configureGit(token, repository) {
         'user.email',
         '41898282+github-actions[bot]@users.noreply.github.com',
     ]);
-    await exec.exec('git', [
-        'remote',
-        'set-url',
-        'origin',
-        `https://x-access-token:${token}@github.com/${repository}.git`,
-    ]);
+    await exec.exec('git', ['remote', 'set-url', 'origin', `https://x-access-token:${token}@github.com/${repository}.git`], { silent: true });
 }
 async function checkoutBranch(branch) {
     await exec.exec('git', ['checkout', '-B', branch]);
@@ -29993,6 +29988,7 @@ async function checkoutBranch(branch) {
 async function commitAndPush(tool, version, branch) {
     await exec.exec('git', ['add', 'mise.toml', 'mise.lock']);
     await exec.exec('git', ['commit', '-m', `deps: Upgrade ${tool} to ${version}`]);
+    await exec.exec('git', ['fetch', 'origin', `refs/heads/${branch}:refs/remotes/origin/${branch}`], { ignoreReturnCode: true });
     await exec.exec('git', ['push', '--force-with-lease', 'origin', branch]);
 }
 
@@ -30038,6 +30034,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = run;
 const core = __importStar(__nccwpck_require__(6966));
 const github = __importStar(__nccwpck_require__(4903));
 const outdated_1 = __nccwpck_require__(8500);
@@ -30059,10 +30056,18 @@ async function run() {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+    const prTitle = core.getInput('pr-title');
+    const prBody = core.getInput('pr-body');
+    const installBefore = core.getInput('install-before').trim();
+    if (installBefore) {
+        process.env['MISE_INSTALL_BEFORE'] = installBefore;
+    }
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
     const repository = `${owner}/${repo}`;
-    // 1. Check for update
+    // 1. Validate tool exists in mise.toml
+    await (0, upgrade_1.validateToolExists)(tool);
+    // 2. Check for update
     const latestVersion = await (0, outdated_1.findLatestVersion)(tool);
     if (!latestVersion) {
         core.info(`${tool} is already up to date.`);
@@ -30071,32 +30076,37 @@ async function run() {
     }
     core.info(`${tool} -> ${latestVersion}`);
     core.setOutput('changed', 'true');
-    // 2. Upgrade
+    // 3. Upgrade
     await (0, upgrade_1.upgradeTool)(tool, bump);
     const newVersion = await (0, upgrade_1.currentVersion)(tool);
-    // 3. Determine branch
+    if (!newVersion) {
+        throw new Error(`Unable to determine current version for "${tool}" after upgrade`);
+    }
+    // 4. Determine branch
     const branch = (0, git_1.branchName)(branchPrefix, tool, newVersion);
     const toolPrefix = `${branchPrefix}/${(0, git_1.safeTool)(tool)}-`;
-    // 4. Skip if open PR already exists for this exact version
+    // 5. Skip if open PR already exists for this exact version
     await (0, git_1.configureGit)(token, repository);
     const existingPrNumber = await (0, pr_1.findOpenPr)(octokit, owner, repo, branch);
     if (existingPrNumber !== null) {
-        core.info(`Open PR already exists for ${tool} ${newVersion}, skipping.`);
+        const existingPrUrl = `https://github.com/${owner}/${repo}/pull/${existingPrNumber}`;
+        core.setOutput('pr-url', existingPrUrl);
+        core.info(`Open PR already exists for ${tool} ${newVersion}: ${existingPrUrl}`);
         return;
     }
-    // 5. Close outdated PRs for the same tool
+    // 6. Close outdated PRs for the same tool
     const outdatedPrs = await (0, pr_1.findOutdatedPrs)(octokit, owner, repo, toolPrefix, branch);
     if (outdatedPrs.length > 0) {
         core.info(`Closing ${outdatedPrs.length} outdated PR(s) for ${tool}`);
         await (0, pr_1.closeOutdatedPrs)(octokit, owner, repo, outdatedPrs);
     }
-    // 6. Commit and push
+    // 7. Commit and push
     await (0, git_1.checkoutBranch)(branch);
     await (0, git_1.commitAndPush)(tool, newVersion, branch);
-    // 7. Get default branch
+    // 8. Get default branch
     const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
     const baseBranch = repoData.default_branch;
-    // 8. Create or get PR
+    // 9. Create or get PR
     const prUrl = await (0, pr_1.createOrGetPr)({
         octokit,
         owner,
@@ -30107,12 +30117,58 @@ async function run() {
         baseBranch,
         labels,
         assignees,
-        branchPrefix: toolPrefix,
+        prTitle,
+        prBody,
     });
     core.setOutput('pr-url', prUrl);
     core.info(`Pull request: ${prUrl}`);
 }
-run().catch((err) => {
+
+
+/***/ }),
+
+/***/ 7353:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core = __importStar(__nccwpck_require__(6966));
+const index_1 = __nccwpck_require__(6866);
+(0, index_1.run)().catch((err) => {
     core.setFailed(err instanceof Error ? err.message : String(err));
 });
 
@@ -30171,7 +30227,17 @@ async function getOutdatedTools() {
         },
         silent: true,
     });
-    return JSON.parse(stdout);
+    let parsed;
+    try {
+        parsed = JSON.parse(stdout);
+    }
+    catch (err) {
+        const reason = err instanceof Error ? `: ${err.message}` : '';
+        throw new Error(`Failed to parse mise outdated output as JSON${reason}: ${stdout.slice(0, 200)}`, { cause: err });
+    }
+    if (Array.isArray(parsed))
+        return parsed;
+    return Object.values(parsed);
 }
 async function findLatestVersion(tool) {
     const entries = await getOutdatedTools();
@@ -30188,21 +30254,50 @@ async function findLatestVersion(tool) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderTemplate = renderTemplate;
 exports.findOpenPr = findOpenPr;
 exports.findOutdatedPrs = findOutdatedPrs;
 exports.closeOutdatedPrs = closeOutdatedPrs;
 exports.createOrGetPr = createOrGetPr;
+function httpStatus(err) {
+    if (err instanceof Error && 'status' in err && typeof err.status === 'number') {
+        return err.status;
+    }
+    return undefined;
+}
+function rethrowWithContext(err, context) {
+    const status = httpStatus(err);
+    const originalMessage = err instanceof Error ? err.message : String(err);
+    if (status === 401) {
+        throw new Error(`GitHub API authentication failed (401). Check that the token has the required permissions (contents: write, pull-requests: write). Original error: ${originalMessage}`, { cause: err });
+    }
+    if (status === 403 || status === 429) {
+        throw new Error(`GitHub API rate limit or permission error (${status}). Try again later or check token scopes. Original error: ${originalMessage}`, { cause: err });
+    }
+    if (status !== undefined) {
+        throw new Error(`GitHub API error ${status} during ${context}: ${originalMessage}`, { cause: err });
+    }
+    throw err;
+}
+function renderTemplate(template, tool, version) {
+    return template.replace(/\{tool\}/g, () => tool).replace(/\{version\}/g, () => version);
+}
 async function findOpenPr(octokit, owner, repo, branch) {
-    const { data } = await octokit.rest.pulls.list({
-        owner,
-        repo,
-        head: `${owner}:${branch}`,
-        state: 'open',
-    });
-    return data[0]?.number ?? null;
+    try {
+        const { data } = await octokit.rest.pulls.list({
+            owner,
+            repo,
+            head: `${owner}:${branch}`,
+            state: 'open',
+        });
+        return data[0]?.number ?? null;
+    }
+    catch (err) {
+        rethrowWithContext(err, 'findOpenPr');
+    }
 }
 async function findOutdatedPrs(octokit, owner, repo, branchPrefix, currentBranch) {
-    const { data } = await octokit.rest.pulls.list({
+    const data = await octokit.paginate(octokit.rest.pulls.list, {
         owner,
         repo,
         state: 'open',
@@ -30219,22 +30314,24 @@ async function closeOutdatedPrs(octokit, owner, repo, prs) {
     }
 }
 async function createOrGetPr(opts) {
-    const { octokit, owner, repo, tool, version, branch, baseBranch, labels, assignees } = opts;
+    const { octokit, owner, repo, tool, version, branch, baseBranch, labels, assignees, prTitle, prBody } = opts;
     let prNumber;
     let prUrl;
     try {
         const { data } = await octokit.rest.pulls.create({
             owner,
             repo,
-            title: `deps: Upgrade ${tool} to ${version}`,
-            body: `Automated upgrade of ${tool} to ${version}.`,
+            title: renderTemplate(prTitle, tool, version),
+            body: renderTemplate(prBody, tool, version),
             base: baseBranch,
             head: branch,
         });
         prNumber = data.number;
         prUrl = data.html_url;
     }
-    catch {
+    catch (err) {
+        if (httpStatus(err) !== 422)
+            rethrowWithContext(err, 'createPr');
         const existing = await octokit.rest.pulls.list({
             owner,
             repo,
@@ -30298,9 +30395,41 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateToolExists = validateToolExists;
 exports.upgradeTool = upgradeTool;
 exports.currentVersion = currentVersion;
 const exec = __importStar(__nccwpck_require__(2851));
+async function validateToolExists(tool) {
+    let stdout = '';
+    const exitCode = await exec.exec('mise', ['ls', '--current', '--json', tool], {
+        listeners: {
+            stdout: (data) => {
+                stdout += data.toString();
+            },
+        },
+        silent: true,
+        ignoreReturnCode: true,
+    });
+    const trimmed = stdout.trim();
+    if (exitCode !== 0 || trimmed === '') {
+        throw new Error(`Tool "${tool}" is not managed by mise. Add it to mise.toml first.`);
+    }
+    let parsed;
+    try {
+        parsed = JSON.parse(trimmed);
+    }
+    catch (err) {
+        throw new Error(`Failed to parse \`mise ls\` output for "${tool}".`, { cause: err });
+    }
+    const isEmptyObject = typeof parsed === 'object' &&
+        parsed !== null &&
+        !Array.isArray(parsed) &&
+        Object.keys(parsed).length === 0;
+    const isEmptyArray = Array.isArray(parsed) && parsed.length === 0;
+    if (isEmptyObject || isEmptyArray) {
+        throw new Error(`Tool "${tool}" is not managed by mise. Add it to mise.toml first.`);
+    }
+}
 async function upgradeTool(tool, bump) {
     const args = ['upgrade'];
     if (bump)
@@ -32239,7 +32368,7 @@ module.exports = parseParams
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(6866);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(7353);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()

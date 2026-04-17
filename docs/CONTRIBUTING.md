@@ -59,8 +59,9 @@ chore: Update linter configuration
 
 The action logic (`src/`) is written in TypeScript and bundled into `dist/index.js` via `@vercel/ncc`.
 
-- After modifying `src/`, the release task (`mise run release`) automatically rebuilds `dist/` and commits it before tagging.
-- You do not need to manually run `mise run build` before releasing. CI does not verify dist freshness — the release task is the source of truth.
+- After modifying `src/`, run `mise run build` and commit `dist/index.js` together with your source changes.
+- The pre-commit hook runs `mise check`, which includes `dist-check` — it builds and verifies that `dist/index.js` is up to date. The commit will be rejected if `dist/index.js` is stale.
+- CI also runs `dist-check` to verify the committed `dist/index.js` matches a fresh build.
 
 ## Quality Assurance
 
@@ -74,11 +75,11 @@ Create a pull request following the [template](../.github/PULL_REQUEST_TEMPLATE.
 
 ## Release
 
-Releases are tag-based. The `dist/index.js` bundle is only updated at release time — `main` does not contain a built artifact between releases.
+Releases are tag-based. `dist/index.js` is committed alongside every `src/` change (see [TypeScript](#typescript) above), so `main` always contains an up-to-date artifact.
 
 **Rule: release promptly after merging to `main`.**
 
-Any merged PR that touches `src/` must be followed by a release before the dogfood workflow will reflect the change. Do not leave `main` in an unreleased state for extended periods.
+Do not leave `main` in an unreleased state for extended periods.
 
 ### Version bump guidelines
 
@@ -94,7 +95,6 @@ mise run release -- <major|minor|patch>
 
 The release task will:
 
-1. Build `dist/` from the current `src/`
-2. Commit the updated `dist/` if it changed
-3. Prompt for confirmation, then create an annotated tag and push
-4. CI picks up the tag and creates the GitHub Release with the floating major tag (e.g. `v1`)
+1. Run `mise run build` and verify `dist/index.js` is up to date (fails if stale)
+2. Prompt for confirmation, then create an annotated tag and push
+3. CI picks up the tag and creates the GitHub Release with the floating major tag (e.g. `v1`)
