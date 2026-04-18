@@ -115,6 +115,78 @@ jobs:
 | `pr-url` | URL of the created or updated pull request. |
 | `changed` | `"true"` if the tool version changed after the upgrade. |
 
+## Triggering CI on upgrade PRs
+
+GitHub does not trigger workflow runs on pull requests opened by `GITHUB_TOKEN`.
+This means CI checks on upgrade PRs will not run automatically when you use the default token.
+
+To have CI trigger automatically, supply a token that is not `GITHUB_TOKEN`.
+
+### Option A: GitHub App token (recommended)
+
+A GitHub App token is not tied to any individual user account and rotates automatically every hour.
+
+**Setup:**
+
+1. Go to *[Settings → Developer settings → GitHub Apps → New GitHub App](https://github.com/settings/apps/new)*
+   - *GitHub App name*: e.g. `mise-upgrade-bot`
+   - *Description*: e.g. `Opens pull requests to upgrade mise-managed tools`
+   - Uncheck *Webhook → Active*
+   - Repository permissions: `Contents: Read and write`, `Pull requests: Read and write` (and `Issues: Read and write` if you use `labels` or `assignees`)
+   - *Where can this GitHub App be installed?*: Only on this account
+2. After creating the app, note the *App ID*
+3. Under *Private keys*, click *Generate a private key* and save the `.pem` file
+4. Click *Install App* and install it on your repository
+5. Add the following as repository secrets (or as secrets in a dedicated [GitHub Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)):
+   - `APP_ID`: the numeric App ID
+   - `APP_PRIVATE_KEY`: the full contents of the `.pem` file
+
+**Workflow example:**
+
+```yaml
+  upgrade:
+    runs-on: ubuntu-latest
+    environment: token-generation  # optional; declare if secrets are stored in a GitHub Environment
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        tool: ${{ fromJson(needs.list-outdated.outputs.tools) }}
+      fail-fast: false
+    steps:
+      - name: Generate token
+        id: app-token
+        uses: actions/create-github-app-token@67e27a7eb7db372a1c61a7f9bdab8699e9ee57f7 # v1.11.3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: 23prime/mise-upgrade-action@<version>
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          tool: ${{ matrix.tool }}
+```
+
+### Option B: Personal Access Token
+
+A fine-grained PAT is simpler to set up but is tied to your personal account.
+
+1. Go to *Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token*
+   - Repository access: select your repository
+   - Repository permissions: `Contents: Read and write`, `Pull requests: Read and write`
+2. Add a repository secret, e.g. `GH_PAT`, with the token value
+
+**Workflow example:**
+
+```yaml
+      - uses: 23prime/mise-upgrade-action@<version>
+        with:
+          token: ${{ secrets.GH_PAT }}
+          tool: ${{ matrix.tool }}
+```
+
 ## Troubleshooting
 
 ### Token permission errors
