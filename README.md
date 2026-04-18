@@ -209,6 +209,11 @@ Add the tool to `mise.toml` (e.g. `mise use actionlint`) before running the acti
 When the tool is already at the latest version, the action exits early and sets
 `changed: "false"`. No commit or PR is created. This is expected behavior.
 
+This also applies when `install-before` is set: `mise outdated` may report a
+tool as outdated even when the release is too recent to satisfy the age
+constraint. In that case, `mise upgrade` runs but produces no file changes, and
+the action exits with `changed: "false"` instead of failing.
+
 ### Rate limit errors when running a matrix
 
 Running many matrix jobs in parallel can hit GitHub API rate limits.

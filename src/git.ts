@@ -26,8 +26,14 @@ export async function checkoutBranch(branch: string): Promise<void> {
   await exec.exec('git', ['checkout', '-B', branch])
 }
 
-export async function commitAndPush(tool: string, version: string, branch: string): Promise<void> {
+export async function commitAndPush(tool: string, version: string, branch: string): Promise<boolean> {
   await exec.exec('git', ['add', 'mise.toml', 'mise.lock'])
+  const diffExitCode = await exec.exec('git', ['diff', '--staged', '--quiet'], {
+    ignoreReturnCode: true,
+  })
+  if (diffExitCode === 0) {
+    return false
+  }
   await exec.exec('git', ['commit', '-m', `deps: Upgrade ${tool} to ${version}`])
   await exec.exec(
     'git',
@@ -35,4 +41,5 @@ export async function commitAndPush(tool: string, version: string, branch: strin
     { ignoreReturnCode: true },
   )
   await exec.exec('git', ['push', '--force-with-lease', 'origin', branch])
+  return true
 }

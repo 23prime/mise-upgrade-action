@@ -76,7 +76,7 @@ beforeEach(() => {
   mockSafeTool.mockReturnValue(TOOL)
   mockConfigureGit.mockResolvedValue()
   mockCheckoutBranch.mockResolvedValue()
-  mockCommitAndPush.mockResolvedValue()
+  mockCommitAndPush.mockResolvedValue(true)
   mockFindOpenPr.mockResolvedValue(null)
   mockFindOutdatedPrs.mockResolvedValue([])
   mockCloseOutdatedPrs.mockResolvedValue()
@@ -128,6 +128,13 @@ describe('run', () => {
         { number: 11, branch: 'mise-upgrade/actionlint-1.7.12' },
       ],
     )
+  })
+
+  it('sets changed=false and returns early when nothing to commit after upgrade', async () => {
+    mockCommitAndPush.mockResolvedValue(false)
+    await run()
+    expect(mockSetOutput).toHaveBeenCalledWith('changed', 'false')
+    expect(mockCreateOrGetPr).not.toHaveBeenCalled()
   })
 
   it('throws when currentVersion returns empty after upgrade', async () => {

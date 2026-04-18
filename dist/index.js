@@ -29987,9 +29987,16 @@ async function checkoutBranch(branch) {
 }
 async function commitAndPush(tool, version, branch) {
     await exec.exec('git', ['add', 'mise.toml', 'mise.lock']);
+    const diffExitCode = await exec.exec('git', ['diff', '--staged', '--quiet'], {
+        ignoreReturnCode: true,
+    });
+    if (diffExitCode === 0) {
+        return false;
+    }
     await exec.exec('git', ['commit', '-m', `deps: Upgrade ${tool} to ${version}`]);
     await exec.exec('git', ['fetch', 'origin', `refs/heads/${branch}:refs/remotes/origin/${branch}`], { ignoreReturnCode: true });
     await exec.exec('git', ['push', '--force-with-lease', 'origin', branch]);
+    return true;
 }
 
 
@@ -30102,7 +30109,12 @@ async function run() {
     }
     // 7. Commit and push
     await (0, git_1.checkoutBranch)(branch);
-    await (0, git_1.commitAndPush)(tool, newVersion, branch);
+    const committed = await (0, git_1.commitAndPush)(tool, newVersion, branch);
+    if (!committed) {
+        core.info(`No changes to commit for ${tool} after upgrade (install-before constraint may apply)`);
+        core.setOutput('changed', 'false');
+        return;
+    }
     // 8. Get default branch
     const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
     const baseBranch = repoData.default_branch;
