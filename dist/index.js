@@ -29993,6 +29993,9 @@ async function commitAndPush(tool, version, branch) {
     if (diffExitCode === 0) {
         return false;
     }
+    if (diffExitCode > 1) {
+        throw new Error(`git diff --staged --quiet failed with exit code ${diffExitCode}`);
+    }
     await exec.exec('git', ['commit', '-m', `deps: Upgrade ${tool} to ${version}`]);
     await exec.exec('git', ['fetch', 'origin', `refs/heads/${branch}:refs/remotes/origin/${branch}`], { ignoreReturnCode: true });
     await exec.exec('git', ['push', '--force-with-lease', 'origin', branch]);
