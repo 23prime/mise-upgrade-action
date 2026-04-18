@@ -74,7 +74,12 @@ export async function run(): Promise<void> {
 
   // 7. Commit and push
   await checkoutBranch(branch)
-  await commitAndPush(tool, newVersion, branch)
+  const committed = await commitAndPush(tool, newVersion, branch)
+  if (!committed) {
+    core.info(`No changes to commit for ${tool} after upgrade (install-before constraint may apply)`)
+    core.setOutput('changed', 'false')
+    return
+  }
 
   // 8. Get default branch
   const { data: repoData } = await octokit.rest.repos.get({ owner, repo })
