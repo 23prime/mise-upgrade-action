@@ -35,8 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: token-generation
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     strategy:
       matrix:
         tool: ${{ fromJson(needs.list-outdated.outputs.tools) }}
