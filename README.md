@@ -115,6 +115,72 @@ jobs:
 | `pr-url` | URL of the created or updated pull request. |
 | `changed` | `"true"` if the tool version changed after the upgrade. |
 
+## Triggering CI on upgrade PRs
+
+GitHub does not trigger workflow runs on pull requests opened by `GITHUB_TOKEN`.
+This means CI checks on upgrade PRs will not run automatically when you use the default token.
+
+To have CI trigger automatically, supply a token that is not `GITHUB_TOKEN`.
+
+### Option A: GitHub App token (recommended)
+
+A GitHub App token is not tied to any individual user account and rotates automatically every hour.
+
+**Setup:**
+
+1. Go to *[Settings → Developer settings → GitHub Apps → New GitHub App](https://github.com/settings/apps/new)*
+   - *GitHub App name*: e.g. `mise-upgrade-bot`
+   - *Description*: e.g. `Opens pull requests to upgrade mise-managed tools`
+   - Uncheck *Webhook → Active*
+   - Repository permissions: `Contents: Read and write`, `Pull requests: Read and write`
+   - *Where can this GitHub App be installed?*: Only on this account
+2. After creating the app, note the *App ID*
+3. Under *Private keys*, click *Generate a private key* and save the `.pem` file
+4. Click *Install App* and install it on your repository
+5. Go to your repository *Settings → Environments → New environment*, create an environment named `token-generation`
+6. Add the following secrets to that environment (or as repository secrets):
+   - `APP_ID`: the numeric App ID
+   - `APP_PRIVATE_KEY`: the full contents of the `.pem` file
+
+**Workflow example:**
+
+```yaml
+  upgrade:
+    environment: token-generation
+    steps:
+      - name: Generate token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+
+      - uses: 23prime/mise-upgrade-action@<version>
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          tool: ${{ matrix.tool }}
+```
+
+### Option B: Personal Access Token
+
+A fine-grained PAT is simpler to set up but is tied to your personal account.
+
+1. Go to *Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token*
+   - Repository access: select your repository
+   - Repository permissions: `Contents: Read and write`, `Pull requests: Read and write`
+2. Add a repository secret, e.g. `GH_PAT`, with the token value
+
+**Workflow example:**
+
+```yaml
+      - uses: 23prime/mise-upgrade-action@<version>
+        with:
+          token: ${{ secrets.GH_PAT }}
+          tool: ${{ matrix.tool }}
+```
+
 ## Troubleshooting
 
 ### Token permission errors
