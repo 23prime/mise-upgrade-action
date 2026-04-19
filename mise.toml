@@ -20,7 +20,7 @@ shellcheck = "0.11"
 "github:zizmorcore/zizmor" = "1"
 
 # Node.js
-node = "24"
+node = "25"
 pnpm = "10"
 
 # Other tools
