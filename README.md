@@ -64,7 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: 23prime/mise-upgrade-action@cafd0db78c71bfa861f77f68e6076901caa73f45 # v1.0.1
+      - uses: 23prime/mise-upgrade-action@d2ea02a7cc2e05f1a4927d32b5325b383c9c7918 # v1.0.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tool: ${{ matrix.tool }}
@@ -88,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: 23prime/mise-upgrade-action@cafd0db78c71bfa861f77f68e6076901caa73f45 # v1.0.1
+      - uses: 23prime/mise-upgrade-action@d2ea02a7cc2e05f1a4927d32b5325b383c9c7918 # v1.0.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tool: ${{ matrix.tool }}
@@ -132,13 +132,12 @@ A GitHub App token is not tied to any individual user account and rotates automa
    - *GitHub App name*: e.g. `mise-upgrade-bot`
    - *Description*: e.g. `Opens pull requests to upgrade mise-managed tools`
    - Uncheck *Webhook → Active*
-   - Repository permissions: `Contents: Read and write`, `Pull requests: Read and write`
+   - Repository permissions: `Contents: Read and write`, `Pull requests: Read and write` (and `Issues: Read and write` if you use `labels` or `assignees`)
    - *Where can this GitHub App be installed?*: Only on this account
 2. After creating the app, note the *App ID*
 3. Under *Private keys*, click *Generate a private key* and save the `.pem` file
 4. Click *Install App* and install it on your repository
-5. Go to your repository *Settings → Environments → New environment*, create an environment named `token-generation`
-6. Add the following secrets to that environment (or as repository secrets):
+5. Add the following as repository secrets (or as secrets in a dedicated [GitHub Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)):
    - `APP_ID`: the numeric App ID
    - `APP_PRIVATE_KEY`: the full contents of the `.pem` file
 
@@ -146,16 +145,23 @@ A GitHub App token is not tied to any individual user account and rotates automa
 
 ```yaml
   upgrade:
-    environment: token-generation
+    runs-on: ubuntu-latest
+    environment: token-generation  # optional; declare if secrets are stored in a GitHub Environment
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        tool: ${{ fromJson(needs.list-outdated.outputs.tools) }}
+      fail-fast: false
     steps:
       - name: Generate token
         id: app-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@67e27a7eb7db372a1c61a7f9bdab8699e9ee57f7 # v1.11.3
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: 23prime/mise-upgrade-action@<version>
         with:
@@ -202,6 +208,11 @@ Add the tool to `mise.toml` (e.g. `mise use actionlint`) before running the acti
 
 When the tool is already at the latest version, the action exits early and sets
 `changed: "false"`. No commit or PR is created. This is expected behavior.
+
+This also applies when `install-before` is set: `mise outdated` may report a
+tool as outdated even when the release is too recent to satisfy the age
+constraint. In that case, `mise upgrade` runs but produces no file changes, and
+the action exits with `changed: "false"` instead of failing.
 
 ### Rate limit errors when running a matrix
 
