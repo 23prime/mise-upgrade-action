@@ -135,12 +135,12 @@ A GitHub App token is not tied to any individual user account and rotates automa
    - Uncheck *Webhook → Active*
    - Repository permissions: `Contents: Read and write`, `Pull requests: Read and write` (and `Issues: Read and write` if you use `labels` or `assignees`)
    - *Where can this GitHub App be installed?*: Only on this account
-2. After creating the app, note the *App ID*
+2. After creating the app, note the *Client ID*
 3. Under *Private keys*, click *Generate a private key* and save the `.pem` file
 4. Click *Install App* and install it on your repository
-5. Add the following as repository secrets (or as secrets in a dedicated [GitHub Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)):
-   - `APP_ID`: the numeric App ID
-   - `APP_PRIVATE_KEY`: the full contents of the `.pem` file
+5. Add the following (or as values in a dedicated [GitHub Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)):
+   - `APP_CLIENT_ID`: the Client ID — as a repository *variable* (`vars.APP_CLIENT_ID`)
+   - `APP_PRIVATE_KEY`: the full contents of the `.pem` file — as a repository *secret* (`secrets.APP_PRIVATE_KEY`)
 
 **Workflow example:**
 
@@ -157,9 +157,9 @@ A GitHub App token is not tied to any individual user account and rotates automa
     steps:
       - name: Generate token
         id: app-token
-        uses: actions/create-github-app-token@67e27a7eb7db372a1c61a7f9bdab8699e9ee57f7 # v1.11.3
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
-          app-id: ${{ secrets.APP_ID }}
+          client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
