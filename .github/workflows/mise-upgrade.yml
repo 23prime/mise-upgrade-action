@@ -58,4 +58,4 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           tool: ${{ matrix.tool }}
-          minimum-release-age: "3d"
+          install-before: "3d"
