@@ -106,7 +106,8 @@ jobs:
 | `bump` | No | `true` | Pass `--bump` to `mise upgrade` to update version constraints in `mise.toml`. |
 | `pr-title` | No | `deps: Upgrade {tool} to {version}` | PR title template. Supports `{tool}` and `{version}` placeholders. |
 | `pr-body` | No | `Automated upgrade of {tool} to {version}.` | PR body template. Supports `{tool}` and `{version}` placeholders. |
-| `install-before` | No | `` | Minimum age of a tool release before it is eligible for upgrade (e.g. `3d`, `1w`). Forwarded to mise as `MISE_INSTALL_BEFORE`. Reduces supply chain risk by avoiding immediately-released versions. |
+| `minimum-release-age` | No | `` | Minimum age of a tool release before it is eligible for upgrade (e.g. `3d`, `1w`). Forwarded to mise as `MISE_MINIMUM_RELEASE_AGE`. Reduces supply chain risk by avoiding immediately-released versions. |
+| `install-before` | No | `` | *Deprecated.* Use `minimum-release-age` instead. |
 
 ## Outputs
 
@@ -209,7 +210,7 @@ Add the tool to `mise.toml` (e.g. `mise use actionlint`) before running the acti
 When the tool is already at the latest version, the action exits early and sets
 `changed: "false"`. No commit or PR is created. This is expected behavior.
 
-This also applies when `install-before` is set: `mise outdated` may report a
+This also applies when `minimum-release-age` is set: `mise outdated` may report a
 tool as outdated even when the release is too recent to satisfy the age
 constraint. In that case, `mise upgrade` runs but produces no file changes, and
 the action exits with `changed: "false"` instead of failing.

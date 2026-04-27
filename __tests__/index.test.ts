@@ -144,12 +144,12 @@ describe('run', () => {
     )
   })
 
-  it('does not set MISE_INSTALL_BEFORE when install-before is whitespace only', async () => {
-    const originalEnv = process.env['MISE_INSTALL_BEFORE']
+  it('does not set MISE_MINIMUM_RELEASE_AGE when minimum-release-age is whitespace only', async () => {
+    const originalEnv = process.env['MISE_MINIMUM_RELEASE_AGE']
     try {
-      delete process.env['MISE_INSTALL_BEFORE']
+      delete process.env['MISE_MINIMUM_RELEASE_AGE']
       mockGetInput.mockImplementation((name: string) => {
-        if (name === 'install-before') return '   '
+        if (name === 'minimum-release-age') return '   '
         const inputs: Record<string, string> = {
           token: 'gh-token',
           tool: TOOL,
@@ -161,19 +161,47 @@ describe('run', () => {
         return inputs[name] ?? ''
       })
       await run()
-      expect(process.env['MISE_INSTALL_BEFORE']).toBeUndefined()
+      expect(process.env['MISE_MINIMUM_RELEASE_AGE']).toBeUndefined()
     } finally {
       if (originalEnv === undefined) {
-        delete process.env['MISE_INSTALL_BEFORE']
+        delete process.env['MISE_MINIMUM_RELEASE_AGE']
       } else {
-        process.env['MISE_INSTALL_BEFORE'] = originalEnv
+        process.env['MISE_MINIMUM_RELEASE_AGE'] = originalEnv
       }
     }
   })
 
-  it('sets MISE_INSTALL_BEFORE env var when install-before input is provided', async () => {
-    const originalEnv = process.env['MISE_INSTALL_BEFORE']
+  it('sets MISE_MINIMUM_RELEASE_AGE env var when minimum-release-age input is provided', async () => {
+    const originalEnv = process.env['MISE_MINIMUM_RELEASE_AGE']
     try {
+      mockGetInput.mockImplementation((name: string) => {
+        if (name === 'minimum-release-age') return '3d'
+        const inputs: Record<string, string> = {
+          token: 'gh-token',
+          tool: TOOL,
+          'branch-prefix': 'mise-upgrade',
+          bump: 'true',
+          labels: '',
+          assignees: '',
+        }
+        return inputs[name] ?? ''
+      })
+      await run()
+      expect(process.env['MISE_MINIMUM_RELEASE_AGE']).toBe('3d')
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env['MISE_MINIMUM_RELEASE_AGE']
+      } else {
+        process.env['MISE_MINIMUM_RELEASE_AGE'] = originalEnv
+      }
+    }
+  })
+
+  it('sets MISE_MINIMUM_RELEASE_AGE from deprecated install-before and emits warning', async () => {
+    const originalEnv = process.env['MISE_MINIMUM_RELEASE_AGE']
+    const mockWarning = core.warning as jest.MockedFunction<typeof core.warning>
+    try {
+      delete process.env['MISE_MINIMUM_RELEASE_AGE']
       mockGetInput.mockImplementation((name: string) => {
         if (name === 'install-before') return '3d'
         const inputs: Record<string, string> = {
@@ -187,12 +215,41 @@ describe('run', () => {
         return inputs[name] ?? ''
       })
       await run()
-      expect(process.env['MISE_INSTALL_BEFORE']).toBe('3d')
+      expect(process.env['MISE_MINIMUM_RELEASE_AGE']).toBe('3d')
+      expect(mockWarning).toHaveBeenCalledWith('install-before is deprecated. Use minimum-release-age instead.')
     } finally {
       if (originalEnv === undefined) {
-        delete process.env['MISE_INSTALL_BEFORE']
+        delete process.env['MISE_MINIMUM_RELEASE_AGE']
       } else {
-        process.env['MISE_INSTALL_BEFORE'] = originalEnv
+        process.env['MISE_MINIMUM_RELEASE_AGE'] = originalEnv
+      }
+    }
+  })
+
+  it('minimum-release-age takes precedence over install-before', async () => {
+    const originalEnv = process.env['MISE_MINIMUM_RELEASE_AGE']
+    try {
+      delete process.env['MISE_MINIMUM_RELEASE_AGE']
+      mockGetInput.mockImplementation((name: string) => {
+        if (name === 'minimum-release-age') return '1w'
+        if (name === 'install-before') return '3d'
+        const inputs: Record<string, string> = {
+          token: 'gh-token',
+          tool: TOOL,
+          'branch-prefix': 'mise-upgrade',
+          bump: 'true',
+          labels: '',
+          assignees: '',
+        }
+        return inputs[name] ?? ''
+      })
+      await run()
+      expect(process.env['MISE_MINIMUM_RELEASE_AGE']).toBe('1w')
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env['MISE_MINIMUM_RELEASE_AGE']
+      } else {
+        process.env['MISE_MINIMUM_RELEASE_AGE'] = originalEnv
       }
     }
   })
