@@ -30068,9 +30068,14 @@ async function run() {
         .filter(Boolean);
     const prTitle = core.getInput('pr-title');
     const prBody = core.getInput('pr-body');
+    const minimumReleaseAge = core.getInput('minimum-release-age').trim();
     const installBefore = core.getInput('install-before').trim();
-    if (installBefore) {
-        process.env['MISE_INSTALL_BEFORE'] = installBefore;
+    const releaseAge = minimumReleaseAge || installBefore;
+    if (installBefore && !minimumReleaseAge) {
+        core.warning('install-before is deprecated. Use minimum-release-age instead.');
+    }
+    if (releaseAge) {
+        process.env['MISE_MINIMUM_RELEASE_AGE'] = releaseAge;
     }
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
@@ -30114,7 +30119,7 @@ async function run() {
     await (0, git_1.checkoutBranch)(branch);
     const committed = await (0, git_1.commitAndPush)(tool, newVersion, branch);
     if (!committed) {
-        core.info(`No changes to commit for ${tool} after upgrade (install-before constraint may apply)`);
+        core.info(`No changes to commit for ${tool} after upgrade (minimum-release-age constraint may apply)`);
         core.setOutput('changed', 'false');
         return;
     }
