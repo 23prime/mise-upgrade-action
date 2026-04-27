@@ -11,6 +11,10 @@ minimum_release_age = "3d"
 # ================================================================
 [tools]
 
+# Node.js
+node = "24"
+pnpm = "10"
+
 # Markdown
 markdownlint-cli2 = "0.22"
 
@@ -18,10 +22,6 @@ markdownlint-cli2 = "0.22"
 actionlint = "1"
 shellcheck = "0.11"
 zizmor = "1"
-
-# Node.js
-node = "25"
-pnpm = "10"
 
 # Other tools
 lefthook = "2"
