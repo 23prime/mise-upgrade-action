@@ -1,9 +1,10 @@
+import { vi } from 'vitest'
 import { findOpenPr, findOutdatedPrs, closeOutdatedPrs, createOrGetPr, renderTemplate } from '../src/pr'
 
 function makeOctokit(prs: Array<{ number: number; head: { ref: string }; html_url: string }>) {
-  const listFn = jest.fn().mockResolvedValue({ data: prs })
+  const listFn = vi.fn().mockResolvedValue({ data: prs })
   return {
-    paginate: jest.fn().mockResolvedValue(prs),
+    paginate: vi.fn().mockResolvedValue(prs),
     rest: {
       pulls: {
         list: listFn,
@@ -28,7 +29,7 @@ describe('findOpenPr', () => {
 
   it('throws auth error on 401', async () => {
     const err = Object.assign(new Error('Unauthorized'), { status: 401 })
-    const octokit = { rest: { pulls: { list: jest.fn().mockRejectedValue(err) } } }
+    const octokit = { rest: { pulls: { list: vi.fn().mockRejectedValue(err) } } }
     await expect(findOpenPr(octokit as never, 'owner', 'repo', 'branch')).rejects.toThrow(
       'GitHub API authentication failed (401)',
     )
@@ -75,8 +76,8 @@ describe('findOutdatedPrs', () => {
 
 describe('closeOutdatedPrs', () => {
   it('closes each PR and deletes its branch', async () => {
-    const update = jest.fn().mockResolvedValue({})
-    const deleteRef = jest.fn().mockResolvedValue({})
+    const update = vi.fn().mockResolvedValue({})
+    const deleteRef = vi.fn().mockResolvedValue({})
     const octokit = {
       rest: {
         pulls: { update },
@@ -128,7 +129,7 @@ describe('createOrGetPr', () => {
   }
 
   it('creates a new PR and returns its URL', async () => {
-    const create = jest.fn().mockResolvedValue({ data: { number: 42, html_url: 'https://github.com/owner/repo/pull/42' } })
+    const create = vi.fn().mockResolvedValue({ data: { number: 42, html_url: 'https://github.com/owner/repo/pull/42' } })
     const octokit = { rest: { pulls: { create }, issues: {} } }
     const url = await createOrGetPr({ ...baseOpts, octokit: octokit as never })
     expect(create).toHaveBeenCalledTimes(1)
@@ -136,7 +137,7 @@ describe('createOrGetPr', () => {
   })
 
   it('renders title and body templates before creating PR', async () => {
-    const create = jest.fn().mockResolvedValue({ data: { number: 42, html_url: 'https://github.com/owner/repo/pull/42' } })
+    const create = vi.fn().mockResolvedValue({ data: { number: 42, html_url: 'https://github.com/owner/repo/pull/42' } })
     const octokit = { rest: { pulls: { create }, issues: {} } }
     await createOrGetPr({
       ...baseOpts,
@@ -152,8 +153,8 @@ describe('createOrGetPr', () => {
 
   it('falls back to existing PR on 422 error', async () => {
     const err = Object.assign(new Error('already exists'), { status: 422 })
-    const create = jest.fn().mockRejectedValue(err)
-    const list = jest.fn().mockResolvedValue({ data: [{ number: 99, html_url: 'https://github.com/owner/repo/pull/99' }] })
+    const create = vi.fn().mockRejectedValue(err)
+    const list = vi.fn().mockResolvedValue({ data: [{ number: 99, html_url: 'https://github.com/owner/repo/pull/99' }] })
     const octokit = { rest: { pulls: { create, list }, issues: {} } }
     const url = await createOrGetPr({ ...baseOpts, octokit: octokit as never })
     expect(url).toBe('https://github.com/owner/repo/pull/99')
@@ -161,7 +162,7 @@ describe('createOrGetPr', () => {
 
   it('throws auth error message on 401', async () => {
     const err = Object.assign(new Error('Unauthorized'), { status: 401 })
-    const create = jest.fn().mockRejectedValue(err)
+    const create = vi.fn().mockRejectedValue(err)
     const octokit = { rest: { pulls: { create }, issues: {} } }
     await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
       'GitHub API authentication failed (401)',
@@ -170,7 +171,7 @@ describe('createOrGetPr', () => {
 
   it('throws rate limit error message on 403', async () => {
     const err = Object.assign(new Error('forbidden'), { status: 403 })
-    const create = jest.fn().mockRejectedValue(err)
+    const create = vi.fn().mockRejectedValue(err)
     const octokit = { rest: { pulls: { create }, issues: {} } }
     await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
       'GitHub API rate limit or permission error (403)',
@@ -179,7 +180,7 @@ describe('createOrGetPr', () => {
 
   it('throws rate limit error message on 429', async () => {
     const err = Object.assign(new Error('rate limited'), { status: 429 })
-    const create = jest.fn().mockRejectedValue(err)
+    const create = vi.fn().mockRejectedValue(err)
     const octokit = { rest: { pulls: { create }, issues: {} } }
     await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
       'GitHub API rate limit or permission error (429)',
@@ -188,7 +189,7 @@ describe('createOrGetPr', () => {
 
   it('throws contextual error message on other HTTP errors', async () => {
     const err = Object.assign(new Error('server error'), { status: 500 })
-    const create = jest.fn().mockRejectedValue(err)
+    const create = vi.fn().mockRejectedValue(err)
     const octokit = { rest: { pulls: { create }, issues: {} } }
     await expect(createOrGetPr({ ...baseOpts, octokit: octokit as never })).rejects.toThrow(
       'GitHub API error 500 during createPr: server error',
@@ -196,9 +197,9 @@ describe('createOrGetPr', () => {
   })
 
   it('applies labels and assignees after creating PR', async () => {
-    const create = jest.fn().mockResolvedValue({ data: { number: 42, html_url: 'https://github.com/owner/repo/pull/42' } })
-    const addLabels = jest.fn().mockResolvedValue({})
-    const addAssignees = jest.fn().mockResolvedValue({})
+    const create = vi.fn().mockResolvedValue({ data: { number: 42, html_url: 'https://github.com/owner/repo/pull/42' } })
+    const addLabels = vi.fn().mockResolvedValue({})
+    const addAssignees = vi.fn().mockResolvedValue({})
     const octokit = { rest: { pulls: { create }, issues: { addLabels, addAssignees } } }
     await createOrGetPr({ ...baseOpts, octokit: octokit as never, labels: ['bug'], assignees: ['alice'] })
     expect(addLabels).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', issue_number: 42, labels: ['bug'] })

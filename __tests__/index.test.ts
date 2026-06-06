@@ -4,32 +4,33 @@ import * as outdated from '../src/outdated'
 import * as upgrade from '../src/upgrade'
 import * as git from '../src/git'
 import * as pr from '../src/pr'
+import { vi, type MockedFunction } from 'vitest'
 import { run } from '../src/index'
 
-jest.mock('@actions/core')
-jest.mock('@actions/github')
-jest.mock('../src/outdated')
-jest.mock('../src/upgrade')
-jest.mock('../src/git')
-jest.mock('../src/pr')
+vi.mock('@actions/core')
+vi.mock('@actions/github')
+vi.mock('../src/outdated')
+vi.mock('../src/upgrade')
+vi.mock('../src/git')
+vi.mock('../src/pr')
 
-const mockGetInput = core.getInput as jest.MockedFunction<typeof core.getInput>
-const mockSetOutput = core.setOutput as jest.MockedFunction<typeof core.setOutput>
-const mockGetOctokit = github.getOctokit as jest.MockedFunction<typeof github.getOctokit>
+const mockGetInput = core.getInput as MockedFunction<typeof core.getInput>
+const mockSetOutput = core.setOutput as MockedFunction<typeof core.setOutput>
+const mockGetOctokit = github.getOctokit as MockedFunction<typeof github.getOctokit>
 
-const mockFindLatestVersion = outdated.findLatestVersion as jest.MockedFunction<typeof outdated.findLatestVersion>
-const mockValidateToolExists = upgrade.validateToolExists as jest.MockedFunction<typeof upgrade.validateToolExists>
-const mockUpgradeTool = upgrade.upgradeTool as jest.MockedFunction<typeof upgrade.upgradeTool>
-const mockCurrentVersion = upgrade.currentVersion as jest.MockedFunction<typeof upgrade.currentVersion>
-const mockBranchName = git.branchName as jest.MockedFunction<typeof git.branchName>
-const mockSafeTool = git.safeTool as jest.MockedFunction<typeof git.safeTool>
-const mockConfigureGit = git.configureGit as jest.MockedFunction<typeof git.configureGit>
-const mockCheckoutBranch = git.checkoutBranch as jest.MockedFunction<typeof git.checkoutBranch>
-const mockCommitAndPush = git.commitAndPush as jest.MockedFunction<typeof git.commitAndPush>
-const mockFindOpenPr = pr.findOpenPr as jest.MockedFunction<typeof pr.findOpenPr>
-const mockFindOutdatedPrs = pr.findOutdatedPrs as jest.MockedFunction<typeof pr.findOutdatedPrs>
-const mockCloseOutdatedPrs = pr.closeOutdatedPrs as jest.MockedFunction<typeof pr.closeOutdatedPrs>
-const mockCreateOrGetPr = pr.createOrGetPr as jest.MockedFunction<typeof pr.createOrGetPr>
+const mockFindLatestVersion = outdated.findLatestVersion as MockedFunction<typeof outdated.findLatestVersion>
+const mockValidateToolExists = upgrade.validateToolExists as MockedFunction<typeof upgrade.validateToolExists>
+const mockUpgradeTool = upgrade.upgradeTool as MockedFunction<typeof upgrade.upgradeTool>
+const mockCurrentVersion = upgrade.currentVersion as MockedFunction<typeof upgrade.currentVersion>
+const mockBranchName = git.branchName as MockedFunction<typeof git.branchName>
+const mockSafeTool = git.safeTool as MockedFunction<typeof git.safeTool>
+const mockConfigureGit = git.configureGit as MockedFunction<typeof git.configureGit>
+const mockCheckoutBranch = git.checkoutBranch as MockedFunction<typeof git.checkoutBranch>
+const mockCommitAndPush = git.commitAndPush as MockedFunction<typeof git.commitAndPush>
+const mockFindOpenPr = pr.findOpenPr as MockedFunction<typeof pr.findOpenPr>
+const mockFindOutdatedPrs = pr.findOutdatedPrs as MockedFunction<typeof pr.findOutdatedPrs>
+const mockCloseOutdatedPrs = pr.closeOutdatedPrs as MockedFunction<typeof pr.closeOutdatedPrs>
+const mockCreateOrGetPr = pr.createOrGetPr as MockedFunction<typeof pr.createOrGetPr>
 
 const OWNER = 'owner'
 const REPO = 'repo'
@@ -41,13 +42,13 @@ const PR_URL = `https://github.com/${OWNER}/${REPO}/pull/42`
 const octokitMock = {
   rest: {
     repos: {
-      get: jest.fn().mockResolvedValue({ data: { default_branch: 'main' } }),
+      get: vi.fn().mockResolvedValue({ data: { default_branch: 'main' } }),
     },
   },
 }
 
 beforeEach(() => {
-  jest.clearAllMocks()
+  vi.clearAllMocks()
 
   mockGetInput.mockImplementation((name: string) => {
     const inputs: Record<string, string> = {
@@ -199,7 +200,7 @@ describe('run', () => {
 
   it('sets MISE_MINIMUM_RELEASE_AGE from deprecated install-before and emits warning', async () => {
     const originalEnv = process.env['MISE_MINIMUM_RELEASE_AGE']
-    const mockWarning = core.warning as jest.MockedFunction<typeof core.warning>
+    const mockWarning = core.warning as MockedFunction<typeof core.warning>
     try {
       delete process.env['MISE_MINIMUM_RELEASE_AGE']
       mockGetInput.mockImplementation((name: string) => {
