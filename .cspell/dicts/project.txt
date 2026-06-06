@@ -5,3 +5,8 @@ defaultBranchRef
 octocat
 pipefail
 esac
+esbuild
+octokit
+undici
+unrs
+vitest

@@ -1,9 +1,10 @@
 import * as exec from '@actions/exec'
+import { vi, type MockedFunction } from 'vitest'
 import { getOutdatedTools, findLatestVersion } from '../src/outdated'
 
-jest.mock('@actions/exec')
+vi.mock('@actions/exec')
 
-const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>
+const mockExec = exec.exec as MockedFunction<typeof exec.exec>
 
 const OUTDATED_JSON_ARRAY = JSON.stringify([
   { name: 'actionlint', version: '1.7.12', latest: '1.7.13' },

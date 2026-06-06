@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Run the dogfood workflow on the current branch"
+set -euo pipefail
+
+branch=$(git symbolic-ref --short HEAD)
+gh workflow run dogfood.yml --ref "$branch"
+echo "Triggered dogfood workflow on branch: $branch"

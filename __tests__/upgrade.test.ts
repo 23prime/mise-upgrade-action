@@ -1,12 +1,13 @@
 import * as exec from '@actions/exec'
+import { vi, type MockedFunction } from 'vitest'
 import { validateToolExists, upgradeTool, currentVersion } from '../src/upgrade'
 
-jest.mock('@actions/exec')
+vi.mock('@actions/exec')
 
-const mockExec = exec.exec as jest.MockedFunction<typeof exec.exec>
+const mockExec = exec.exec as MockedFunction<typeof exec.exec>
 
 beforeEach(() => {
-  jest.clearAllMocks()
+  vi.clearAllMocks()
 })
 
 describe('validateToolExists', () => {
