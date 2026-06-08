@@ -28,6 +28,10 @@ on:
       - "jest.config.js"
       - ".github/workflows/check-typescript.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions: {}
 
 jobs:

@@ -83,4 +83,5 @@ runs:
         INPUT_MINIMUM-RELEASE-AGE: ${{ inputs.minimum-release-age }}
         INPUT_INSTALL-BEFORE: ${{ inputs.install-before }}
         GITHUB_TOKEN: ${{ inputs.token }}
-      run: node "${{ github.action_path }}/dist/index.js"
+        ACTION_PATH: ${{ github.action_path }}
+      run: node "$ACTION_PATH/dist/index.js"
